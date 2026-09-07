@@ -1,0 +1,16 @@
+auto
+energy
+fmcg
+infra
+it
+media
+metal
+midcap150
+next50
+nifty
+niftybank
+pharma
+psubank
+realty
+sensex
+smlcap250
