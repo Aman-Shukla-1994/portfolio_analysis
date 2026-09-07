@@ -42,7 +42,7 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     fi
 
     # Run script and retain the exit status so failed symbols remain visible.
-    ./tranches.sh "$line" > output.txt 2>&1
+    bash tranches.sh "$line" > output.txt 2>&1
     tranche_status=$?
 
     # Pull the percentage distance from the 52-week range.

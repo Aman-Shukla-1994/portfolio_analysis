@@ -11,6 +11,8 @@ on:
           - holdings.txt
           - indices.txt
 
+run-name: Analyze ${{ inputs.watchlist }}
+
 permissions:
   contents: read
 
@@ -28,11 +30,4 @@ jobs:
           WATCHLIST: ${{ inputs.watchlist }}
         run: |
           set -o pipefail
-          bash read_file.sh "$WATCHLIST" | tee dashboard-output.txt
-
-      - name: Upload dashboard report
-        uses: actions/upload-artifact@v4
-        with:
-          name: dashboard-report
-          path: dashboard-output.txt
-          if-no-files-found: error
+          bash read_file.sh "$WATCHLIST"

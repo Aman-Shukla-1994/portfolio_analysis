@@ -1,4 +1,5 @@
 name: Analyze single symbol
+run-name: Analyze ${{ inputs.symbol }}
 
 on:
   workflow_dispatch:
@@ -7,8 +8,6 @@ on:
         description: Stock or index symbol, for example BSE or NIFTY
         required: true
         type: string
-
-run-name: Analyze ${{ inputs.symbol }}
 
 permissions:
   contents: read
@@ -28,5 +27,4 @@ jobs:
           SYMBOL: ${{ inputs.symbol }}
         run: |
           set -o pipefail
-          SYMBOL=$(printf '%s' "${SYMBOL}" | tr '[:lower:]' '[:upper:]')
           bash tranches.sh "${SYMBOL}"
