@@ -547,19 +547,22 @@ else:
 
 def yearly_return(years):
 
-    year = ref_date.year - years
+    months = round(years * 12)
+    target_month_index = ref_date.year * 12 + ref_date.month - 1 - months
+    year, month_index = divmod(target_month_index, 12)
+    month = month_index + 1
 
     day = min(
         ref_date.day,
         calendar.monthrange(
             year,
-            ref_date.month
+            month
         )[1]
     )
 
     target = datetime.date(
         year,
-        ref_date.month,
+        month,
         day
     )
 
@@ -579,6 +582,8 @@ ret_2y = yearly_return(2)
 ret_3y = yearly_return(3)
 ret_4y = yearly_return(4)
 ret_5y = yearly_return(5)
+ret_7_5y = yearly_return(7.5)
+ret_10y = yearly_return(10)
 
 
 # ============================================================
@@ -812,6 +817,8 @@ print(f"2Y Return       : {fmt_pct(ret_2y)}")
 print(f"3Y Return       : {fmt_pct(ret_3y)}")
 print(f"4Y Return       : {fmt_pct(ret_4y)}")
 print(f"5Y Return       : {fmt_pct(ret_5y)}")
+print(f"7.5Y Return     : {fmt_pct(ret_7_5y)}")
+print(f"10Y Return      : {fmt_pct(ret_10y)}")
 print("-------------------------------------------------")
 print(f"Long Trend      : {long_trend}")
 

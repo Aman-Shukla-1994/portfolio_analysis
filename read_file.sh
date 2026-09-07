@@ -17,8 +17,8 @@ TMP_DASH=$(mktemp)
 trap 'rm -f "$TMP_DASH"' EXIT
 
 # Print a structured header row with clean alignment spacing
-printf "%-15s %-25s %-10s %-10s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s\n" \
-       "SYMBOL" "ACTION" "FROM 52W LOW" "FROM 52W HIGH" "1W" "1M" "3M" "6M" "YTD" "1Y" "3Y" "5Y"
+printf "%-15s %-25s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s\n" \
+    "SYMBOL" "ACTION" "52W H" "52W L" "1W" "1M" "3M" "6M" "YTD" "1Y" "3Y" "5Y" "10Y"
 echo "-----------------------------------------------------------------------------------------------------------------------------------"
 
 # Function to add color tokens to text based on indicators
@@ -50,14 +50,15 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     hi52=$(grep "From 52W High" output.txt | cut -d : -f2 | xargs)
 
     ac=$(grep "ACTION" output.txt | cut -d : -f2 | xargs)
-    w1=$(grep "1W" output.txt | cut -d : -f2 | xargs)
-    m1=$(grep "1M" output.txt | cut -d : -f2 | xargs)
-    m3=$(grep "3M" output.txt | cut -d : -f2 | xargs)
-    m6=$(grep "6M" output.txt | cut -d : -f2 | xargs)
-    yt=$(grep "YTD" output.txt | cut -d : -f2 | xargs)
-    y1=$(grep "1Y" output.txt | cut -d : -f2 | xargs)
-    y3=$(grep "3Y" output.txt | cut -d : -f2 | xargs)
-    y5=$(grep "5Y" output.txt | cut -d : -f2 | xargs)
+    w1=$(grep "^1W Return" output.txt | cut -d : -f2 | xargs)
+    m1=$(grep "^1M Return" output.txt | cut -d : -f2 | xargs)
+    m3=$(grep "^3M Return" output.txt | cut -d : -f2 | xargs)
+    m6=$(grep "^6M Return" output.txt | cut -d : -f2 | xargs)
+    yt=$(grep "^YTD Return" output.txt | cut -d : -f2 | xargs)
+    y1=$(grep "^1Y Return" output.txt | cut -d : -f2 | xargs)
+    y3=$(grep "^3Y Return" output.txt | cut -d : -f2 | xargs)
+    y5=$(grep "^5Y Return" output.txt | cut -d : -f2 | xargs)
+    y10=$(grep "^10Y Return" output.txt | cut -d : -f2 | xargs)
 
     if [ -n "$ac" ]; then
         # Determine Color Token for Action Status Column
@@ -80,6 +81,7 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
         t_y1=$(get_color_token "$y1")
         t_y3=$(get_color_token "$y3")
         t_y5=$(get_color_token "$y5")
+        t_y10=$(get_color_token "$y10")
 
         # =========================================================================
         # REVISED ACTION SORTING PRIORITY LIST
@@ -102,7 +104,7 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
         fi
 
         # Save raw values alongside color map blueprints to temporary file
-        echo "$rank|$line|$ac|$col_tok|$lo52|$t_lo52|$hi52|$t_hi52|$w1|$t_w1|$m1|$t_m1|$m3|$t_m3|$m6|$t_m6|$yt|$t_yt|$y1|$t_y1|$y3|$t_y3|$y5|$t_y5" >> "$TMP_DASH"
+        echo "$rank|$line|$ac|$col_tok|$hi52|$t_hi52|$lo52|$t_lo52|$w1|$t_w1|$m1|$t_m1|$m3|$t_m3|$m6|$t_m6|$yt|$t_yt|$y1|$t_y1|$y3|$t_y3|$y5|$t_y5|$y10|$t_y10" >> "$TMP_DASH"
     elif [ "$tranche_status" -ne 0 ]; then
         # Do not silently discard symbols whose market data could not be read.
         echo "G|$line|ERROR|Y|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N" >> "$TMP_DASH"
@@ -122,7 +124,7 @@ apply_color() {
 }
 
 # Read, sort by priority rank field (A -> B -> C -> D -> E -> F), and print
-sort -t'|' -k1,1 "$TMP_DASH" | while IFS='|' read -r r symbol action c_tok lo52 t_lo52 hi52 t_hi52 w1 t_w1 m1 t_m1 m3 t_m3 m6 t_m6 yt t_yt y1 t_y1 y3 t_y3 y5 t_y5; do
+sort -t'|' -k1,1 "$TMP_DASH" | while IFS='|' read -r r symbol action c_tok hi52 t_hi52 lo52 t_lo52 w1 t_w1 m1 t_m1 m3 t_m3 m6 t_m6 yt t_yt y1 t_y1 y3 t_y3 y5 t_y5 y10 t_y10; do
     # Print out the base symbols
     printf "%-15s " "$symbol"
     
@@ -131,8 +133,8 @@ sort -t'|' -k1,1 "$TMP_DASH" | while IFS='|' read -r r symbol action c_tok lo52 
     printf "%-25s${NC} " "$action"
 
     # Render the percentage distance from the 52-week range.
-    apply_color "$(printf "%-8s" "$lo52")" "$t_lo52"; echo -n " "
     apply_color "$(printf "%-8s" "$hi52")" "$t_hi52"; echo -n " "
+    apply_color "$(printf "%-8s" "$lo52")" "$t_lo52"; echo -n " "
 
     # Render remaining timeline percentage columns individually
     apply_color "$(printf "%-8s" "$w1")" "$t_w1"; echo -n " "
@@ -142,7 +144,8 @@ sort -t'|' -k1,1 "$TMP_DASH" | while IFS='|' read -r r symbol action c_tok lo52 
     apply_color "$(printf "%-8s" "$yt")" "$t_yt"; echo -n " "
     apply_color "$(printf "%-8s" "$y1")" "$t_y1"; echo -n " "
     apply_color "$(printf "%-8s" "$y3")" "$t_y3"; echo -n " "
-    apply_color "$(printf "%-8s" "$y5")" "$t_y5"; echo ""
+    apply_color "$(printf "%-8s" "$y5")" "$t_y5"; echo -n " "
+    apply_color "$(printf "%-8s" "$y10")" "$t_y10"; echo ""
 done
 
 rm -f "$TMP_DASH"

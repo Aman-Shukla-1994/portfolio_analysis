@@ -8,8 +8,8 @@ on:
         required: true
         type: choice
         options:
-          - holdings.txt
           - indices.txt
+          - holdings.txt
 
 run-name: Analyze ${{ inputs.watchlist }}
 
