@@ -368,15 +368,6 @@ high_date = max(
 low_52 = week52_lows[low_date]
 high_52 = week52_highs[high_date]
 
-# Fallback to Yahoo metadata if available
-meta_high = meta_long.get("fiftyTwoWeekHigh") or meta_recent.get("fiftyTwoWeekHigh")
-meta_low = meta_long.get("fiftyTwoWeekLow") or meta_recent.get("fiftyTwoWeekLow")
-
-if meta_high:
-    high_52 = float(meta_high)
-if meta_low:
-    low_52 = float(meta_low)
-
 
 # ============================================================
 # SHORT TERM
