@@ -11,7 +11,6 @@ on:
 run-name: Analyze ${{ inputs.symbol }}
 
 permissions:
-  actions: write
   contents: read
 
 jobs:
@@ -30,7 +29,4 @@ jobs:
         run: |
           set -o pipefail
           SYMBOL=$(printf '%s' "${SYMBOL}" | tr '[:lower:]' '[:upper:]')
-          gh api --method PATCH \
-            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-            -f "name=Analyze ${SYMBOL}"
           bash tranches.sh "${SYMBOL}"
