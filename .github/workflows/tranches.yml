@@ -11,6 +11,7 @@ on:
 run-name: Analyze ${{ inputs.symbol }}
 
 permissions:
+  actions: write
   contents: read
 
 jobs:
@@ -24,14 +25,12 @@ jobs:
 
       - name: Run tranche calculator
         env:
+          GH_TOKEN: ${{ github.token }}
           SYMBOL: ${{ inputs.symbol }}
         run: |
           set -o pipefail
-          bash tranches.sh "$SYMBOL" | tee tranche-output.txt
-
-      - name: Upload tranche report
-        uses: actions/upload-artifact@v4
-        with:
-          name: tranche-report
-          path: tranche-output.txt
-          if-no-files-found: error
+          SYMBOL=$(printf '%s' "${SYMBOL}" | tr '[:lower:]' '[:upper:]')
+          gh api --method PATCH \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            -f "name=Analyze ${SYMBOL}"
+          bash tranches.sh "${SYMBOL}"
