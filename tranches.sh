@@ -24,76 +24,95 @@ SYMBOL=$(echo "$1" | tr '[:lower:]' '[:upper:]')
 if [ "$SYMBOL" = "NIFTY" ] || [ "$SYMBOL" = "NIFTY50" ]; then
     YAHOO="%5ENSEI"
     SYMBOL="NIFTY_50"
+    NSE_INDEX="NIFTY 50"
 elif [ "$SYMBOL" = "SENSEX" ]; then
     YAHOO="%5EBSESN"
     SYMBOL="SENSEX"
+    NSE_INDEX=""
 elif [ "$SYMBOL" = "NEXT50" ] || [ "$SYMBOL" = "NIFTYNEXT50" ]; then
     YAHOO="%5ENSMIDCP"
     SYMBOL="NIFTY_NEXT_50"
+    NSE_INDEX="NIFTY NEXT 50"
 elif [ "$SYMBOL" = "VIX" ] || [ "$SYMBOL" = "INDIAVIX" ]; then
     YAHOO="%5EINDIAVIX"
     SYMBOL="INDIA_VIX"
+    NSE_INDEX="INDIA VIX"
 
 # 2. SECTORAL BANKING & FINANCE
 elif [ "$SYMBOL" = "BANKNIFTY" ] || [ "$SYMBOL" = "NIFTYBANK" ] || [ "$SYMBOL" = "BANK" ]; then
     YAHOO="%5ENSEBANK"
     SYMBOL="NIFTY_BANK"
+    NSE_INDEX="NIFTY BANK"
 elif [ "$SYMBOL" = "PSUBANK" ] || [ "$SYMBOL" = "NIFTYPSUBANK" ]; then
     YAHOO="%5ECNXPSUBANK"
     SYMBOL="NIFTY_PSU_BANK"
+    NSE_INDEX="NIFTY PSU BANK"
 
 # 3. CORE INDUSTRIAL & SECTORAL INDICES
 elif [ "$SYMBOL" = "IT" ] || [ "$SYMBOL" = "NIFTYIT" ]; then
     YAHOO="%5ECNXIT"
     SYMBOL="NIFTY_IT"
+    NSE_INDEX="NIFTY IT"
 elif [ "$SYMBOL" = "AUTO" ] || [ "$SYMBOL" = "NIFTYAUTO" ]; then
     YAHOO="%5ECNXAUTO"
     SYMBOL="NIFTY_AUTO"
+    NSE_INDEX="NIFTY AUTO"
 elif [ "$SYMBOL" = "FMCG" ] || [ "$SYMBOL" = "NIFTYFMCG" ]; then
     YAHOO="%5ECNXFMCG"
     SYMBOL="NIFTY_FMCG"
+    NSE_INDEX="NIFTY FMCG"
 elif [ "$SYMBOL" = "PHARMA" ] || [ "$SYMBOL" = "NIFTYPHARMA" ]; then
     YAHOO="%5ECNXPHARMA"
     SYMBOL="NIFTY_PHARMA"
+    NSE_INDEX="NIFTY PHARMA"
 elif [ "$SYMBOL" = "METAL" ] || [ "$SYMBOL" = "NIFTYMETAL" ]; then
     YAHOO="%5ECNXMETAL"
     SYMBOL="NIFTY_METAL"
+    NSE_INDEX="NIFTY METAL"
 elif [ "$SYMBOL" = "REALTY" ] || [ "$SYMBOL" = "NIFTYREALTY" ]; then
     YAHOO="%5ECNXREALTY"
     SYMBOL="NIFTY_REALTY"
+    NSE_INDEX="NIFTY REALTY"
 elif [ "$SYMBOL" = "ENERGY" ] || [ "$SYMBOL" = "NIFTYENERGY" ]; then
     YAHOO="%5ECNXENERGY"
     SYMBOL="NIFTY_ENERGY"
+    NSE_INDEX="NIFTY ENERGY"
 elif [ "$SYMBOL" = "INFRA" ] || [ "$SYMBOL" = "NIFTYINFRA" ]; then
     YAHOO="%5ECNXINFRA"
     SYMBOL="NIFTY_INFRA"
+    NSE_INDEX="NIFTY INFRA"
 elif [ "$SYMBOL" = "MEDIA" ] || [ "$SYMBOL" = "NIFTYMEDIA" ]; then
     YAHOO="%5ECNXMEDIA"
     SYMBOL="NIFTY_MEDIA"
+    NSE_INDEX="NIFTY MEDIA"
 
 # 4. BROAD MARKET MID & SMALL CAPS
 elif [ "$SYMBOL" = "MIDCAP150" ] || [ "$SYMBOL" = "NIFTY_MIDCAP_150" ] || [ "$SYMBOL" = "MIDCAP" ]; then
     YAHOO="NIFTYMIDCAP150.NS"
     SYMBOL="NIFTY_MIDCAP_150"
+    NSE_INDEX="NIFTY MIDCAP 150"
 #elif [ "$SYMBOL" = "SMLCAP100" ] || [ "$SYMBOL" = "NIFTY_SMLCAP_100" ]; then
 #    YAHOO="%5ECNXSC"
 #    SYMBOL="NIFTY_SMALLCAP_100"
 elif [ "$SYMBOL" = "SMLCAP250" ] || [ "$SYMBOL" = "NIFTY_SMLCAP_250" ] || [ "$SYMBOL" = "SMLCAP" ]; then
     YAHOO="NIFTYSMLCAP250.NS"
     SYMBOL="NIFTY_SMALLCAP_250"
+    NSE_INDEX="NIFTY Smallcap 250"
 
 # 5. USER MANUAL FALLBACK OVERRIDES
 elif [[ "$SYMBOL" == *.* ]] || [[ "$SYMBOL" == ^* ]]; then
     YAHOO=$(echo "$SYMBOL" | sed 's/\^/%5E/g')
 else
     YAHOO="${SYMBOL}.NS"
+    NSE_INDEX=""
 fi
 
 TMP_LONG=$(mktemp)
 TMP_RECENT=$(mktemp)
+TMP_NSE=$(mktemp)
 
 cleanup() {
-    rm -f "$TMP_LONG" "$TMP_RECENT"
+    rm -f "$TMP_LONG" "$TMP_RECENT" "$TMP_NSE"
 }
 trap cleanup EXIT
 
@@ -150,12 +169,29 @@ if ! download_yahoo "$RECENT_URL" "$TMP_RECENT"; then
     echo '{}' > "$TMP_RECENT"
 fi
 
+if [ -n "$NSE_INDEX" ]; then
+    NSE_URL="https://www.nseindia.com/api/allIndices"
+    if ! curl -L -sS \
+        --connect-timeout 15 \
+        --max-time 60 \
+        -A "Mozilla/5.0" \
+        "$NSE_URL" \
+        -o "$TMP_NSE"; then
+        echo
+        echo "WARNING: Official NSE index range refresh failed."
+        echo "Continuing with Yahoo historical high/low data..."
+        echo
+        echo '{}' > "$TMP_NSE"
+    fi
+else
+    echo '{}' > "$TMP_NSE"
+fi
 
 # ============================================================
 # PYTHON CALCULATIONS
 # ============================================================
 
-python3 - "$TMP_LONG" "$TMP_RECENT" "$SYMBOL" <<'PY'
+python3 - "$TMP_LONG" "$TMP_RECENT" "$TMP_NSE" "$SYMBOL" "$NSE_INDEX" <<'PY'
 
 import sys
 import json
@@ -164,7 +200,9 @@ import calendar
 
 long_file = sys.argv[1]
 recent_file = sys.argv[2]
-SYMBOL = sys.argv[3]
+nse_file = sys.argv[3]
+SYMBOL = sys.argv[4]
+NSE_INDEX = sys.argv[5]
 
 # India timezone without requiring tzdata
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
@@ -291,6 +329,17 @@ def trading_return(data, reference_date, reference_close, sessions):
 long_close, long_high, long_low, meta_long = load_yahoo(long_file)
 recent_close, recent_high, recent_low, meta_recent = load_yahoo(recent_file)
 
+try:
+    with open(nse_file, "r") as f:
+        nse_data = json.load(f).get("data", [])
+except Exception:
+    nse_data = []
+
+nse_index = next(
+    (item for item in nse_data if item.get("index") == NSE_INDEX),
+    None
+)
+
 data = dict(long_close)
 data.update(recent_close)
 
@@ -334,7 +383,9 @@ if age > 7:
 # 52 WEEK HIGH / LOW (INTRADAY)
 # ============================================================
 
-week52_start = today - datetime.timedelta(days=365)
+# Anchor the lookback to the latest market session used for all other metrics.
+# Using today can omit valid sessions when the feed is delayed or markets are closed.
+week52_start = ref_date - datetime.timedelta(days=365)
 
 week52_lows = {
     d: c
@@ -367,6 +418,15 @@ high_date = max(
 
 low_52 = week52_lows[low_date]
 high_52 = week52_highs[high_date]
+
+if nse_index:
+    official_low = nse_index.get("yearLow")
+    official_high = nse_index.get("yearHigh")
+    if official_low is not None and official_high is not None:
+        low_52 = float(official_low)
+        high_52 = float(official_high)
+        low_date = "NSE official"
+        high_date = "NSE official"
 
 
 # ============================================================
@@ -708,15 +768,15 @@ from_high = return_pct(
 
 print()
 print("=================================================")
-print("             STOCK TRANCHE CALCULATOR")
-print("=================================================")
 print(f"Stock           : {SYMBOL}")
 print(f"Reference Date  : {ref_date}")
 print(f"Reference Close : Rs. {ref_close:.2f}")
 print("-------------------------------------------------")
 print(f"52-Week Low     : Rs. {low_52:.2f}")
+print(f"From 52W Low    : {fmt_pct(from_low)}")
 print(f"52W Low Date    : {low_date}")
 print(f"52-Week High    : Rs. {high_52:.2f}")
+print(f"From 52W High   : {fmt_pct(from_high)}")
 print(f"52W High Date   : {high_date}")
 
 print()
@@ -757,15 +817,9 @@ print(f"Long Trend      : {long_trend}")
 
 print()
 print("=================================================")
-print("                 OVERALL ANALYSIS")
 print("=================================================")
-print(f"Short Term      : {short_trend}")
-print(f"Medium Term     : {medium_trend}")
-print(f"Long Term       : {long_trend}")
-print()
 print(f"ACTION          : {action}")
-
-print()
+print("=================================================")
 print("=================================================")
 print("                TRANCHE LEVELS")
 print("=================================================")
@@ -775,13 +829,11 @@ print(f"T2              : Rs. {T2:.2f}")
 print(f"T3              : Rs. {T3:.2f}")
 print(f"T4              : Rs. {T4:.2f}")
 print("-------------------------------------------------")
+print(f"Reference Close : Rs. {ref_close:.2f}")
+print(f"Current Tranche : {current_tranche}")
+print("-------------------------------------------------")
 print(f"Sweet Spot 1    : Rs. {sweet_spot_1:.2f} ({fmt_pct(dist_ss1)}) [T1-T2 Mid]")
 print(f"Sweet Spot 2    : Rs. {sweet_spot_2:.2f} ({fmt_pct(dist_ss2)}) [T2-T3 Mid]")
-print("-------------------------------------------------")
-print(f"Current Tranche : {current_tranche}")
-print(f"From 52W Low    : {fmt_pct(from_low)}")
-print(f"From 52W High   : {fmt_pct(from_high)}")
-print("=================================================")
 print()
 
 PY

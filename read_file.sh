@@ -17,9 +17,9 @@ TMP_DASH=$(mktemp)
 trap 'rm -f "$TMP_DASH"' EXIT
 
 # Print a structured header row with clean alignment spacing
-printf "%-15s %-25s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s\n" \
-       "SYMBOL" "ACTION" "52wH" "1W" "1M" "3M" "6M" "YTD" "1Y" "3Y" "5Y"
-echo "---------------------------------------------------------------------------------------------------------------------"
+printf "%-15s %-25s %-10s %-10s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s\n" \
+       "SYMBOL" "ACTION" "FROM 52W LOW" "FROM 52W HIGH" "1W" "1M" "3M" "6M" "YTD" "1Y" "3Y" "5Y"
+echo "-----------------------------------------------------------------------------------------------------------------------------------"
 
 # Function to add color tokens to text based on indicators
 get_color_token() {
@@ -45,7 +45,8 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     ./tranches.sh "$line" > output.txt 2>&1
     tranche_status=$?
 
-    # Pulling out the "From 52W High" metric row
+    # Pull the percentage distance from the 52-week range.
+    lo52=$(grep "From 52W Low" output.txt | cut -d : -f2 | xargs)
     hi52=$(grep "From 52W High" output.txt | cut -d : -f2 | xargs)
 
     ac=$(grep "ACTION" output.txt | cut -d : -f2 | xargs)
@@ -69,6 +70,7 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
         fi
 
         # Get color tokens for percentages
+        t_lo52=$(get_color_token "$lo52")
         t_hi52=$(get_color_token "$hi52")
         t_w1=$(get_color_token "$w1")
         t_m1=$(get_color_token "$m1")
@@ -100,10 +102,10 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
         fi
 
         # Save raw values alongside color map blueprints to temporary file
-        echo "$rank|$line|$ac|$col_tok|$hi52|$t_hi52|$w1|$t_w1|$m1|$t_m1|$m3|$t_m3|$m6|$t_m6|$yt|$t_yt|$y1|$t_y1|$y3|$t_y3|$y5|$t_y5" >> "$TMP_DASH"
+        echo "$rank|$line|$ac|$col_tok|$lo52|$t_lo52|$hi52|$t_hi52|$w1|$t_w1|$m1|$t_m1|$m3|$t_m3|$m6|$t_m6|$yt|$t_yt|$y1|$t_y1|$y3|$t_y3|$y5|$t_y5" >> "$TMP_DASH"
     elif [ "$tranche_status" -ne 0 ]; then
         # Do not silently discard symbols whose market data could not be read.
-        echo "G|$line|ERROR|Y|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N" >> "$TMP_DASH"
+        echo "G|$line|ERROR|Y|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N" >> "$TMP_DASH"
     fi
     
     rm -f output.txt
@@ -120,7 +122,7 @@ apply_color() {
 }
 
 # Read, sort by priority rank field (A -> B -> C -> D -> E -> F), and print
-sort -t'|' -k1,1 "$TMP_DASH" | while IFS='|' read -r r symbol action c_tok hi52 t_hi52 w1 t_w1 m1 t_m1 m3 t_m3 m6 t_m6 yt t_yt y1 t_y1 y3 t_y3 y5 t_y5; do
+sort -t'|' -k1,1 "$TMP_DASH" | while IFS='|' read -r r symbol action c_tok lo52 t_lo52 hi52 t_hi52 w1 t_w1 m1 t_m1 m3 t_m3 m6 t_m6 yt t_yt y1 t_y1 y3 t_y3 y5 t_y5; do
     # Print out the base symbols
     printf "%-15s " "$symbol"
     
@@ -128,7 +130,8 @@ sort -t'|' -k1,1 "$TMP_DASH" | while IFS='|' read -r r symbol action c_tok hi52 
     if [ "$c_tok" = "G" ]; then echo -ne "${GREEN}"; elif [ "$c_tok" = "R" ]; then echo -ne "${RED}"; else echo -ne "${YELLOW}"; fi
     printf "%-25s${NC} " "$action"
 
-    # Render the 52wH distance metric column
+    # Render the percentage distance from the 52-week range.
+    apply_color "$(printf "%-8s" "$lo52")" "$t_lo52"; echo -n " "
     apply_color "$(printf "%-8s" "$hi52")" "$t_hi52"; echo -n " "
 
     # Render remaining timeline percentage columns individually

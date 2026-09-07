@@ -1,0 +1,38 @@
+name: Run watchlist dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      watchlist:
+        description: Watchlist to analyze
+        required: true
+        type: choice
+        options:
+          - holdings.txt
+          - indices.txt
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze selected watchlist
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run dashboard
+        env:
+          WATCHLIST: ${{ inputs.watchlist }}
+        run: |
+          set -o pipefail
+          bash read_file.sh "$WATCHLIST" | tee dashboard-output.txt
+
+      - name: Upload dashboard report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-report
+          path: dashboard-output.txt
+          if-no-files-found: error

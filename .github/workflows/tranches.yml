@@ -1,0 +1,37 @@
+name: Analyze single symbol
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbol:
+        description: Stock or index symbol, for example BSE or NIFTY
+        required: true
+        type: string
+
+run-name: Analyze ${{ inputs.symbol }}
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze ${{ inputs.symbol }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run tranche calculator
+        env:
+          SYMBOL: ${{ inputs.symbol }}
+        run: |
+          set -o pipefail
+          bash tranches.sh "$SYMBOL" | tee tranche-output.txt
+
+      - name: Upload tranche report
+        uses: actions/upload-artifact@v4
+        with:
+          name: tranche-report
+          path: tranche-output.txt
+          if-no-files-found: error
