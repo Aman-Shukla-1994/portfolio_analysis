@@ -34,4 +34,4 @@ jobs:
           WATCHLIST: ${{ inputs.watchlist }}
         run: |
           set -o pipefail
-          bash scripts/read_file.sh "$WATCHLIST"
+          bash scripts/compare.sh "watchlists/$WATCHLIST"

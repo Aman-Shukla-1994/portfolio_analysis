@@ -42,7 +42,8 @@ NC='\033[0m' # No Color (Resets text)
 
 # Create a temporary workspace file for sorting
 TMP_DASH=$(mktemp)
-trap 'rm -f "$TMP_DASH"' EXIT
+TMP_OUTPUT=$(mktemp)
+trap 'rm -f "$TMP_DASH" "$TMP_OUTPUT"' EXIT
 
 # Print a structured header row with clean alignment spacing
 printf "%-15s %-25s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s\n" \
@@ -70,23 +71,23 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     fi
 
     # Run script and retain the exit status so failed symbols remain visible.
-    bash "$SCRIPT_DIR/tranches.sh" "$line" > "$REPO_ROOT/output.txt" 2>&1
+    bash "$SCRIPT_DIR/stock.sh" "$line" > "$TMP_OUTPUT" 2>&1
     tranche_status=$?
 
     # Pull the percentage distance from the 52-week range.
-    lo52=$(grep "From 52W Low" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
-    hi52=$(grep "From 52W High" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
+    lo52=$(grep "From 52W Low" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    hi52=$(grep "From 52W High" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
 
-    ac=$(grep "ACTION" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
-    w1=$(grep "^1W Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
-    m1=$(grep "^1M Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
-    m3=$(grep "^3M Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
-    m6=$(grep "^6M Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
-    yt=$(grep "^YTD Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
-    y1=$(grep "^1Y Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
-    y3=$(grep "^3Y Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
-    y5=$(grep "^5Y Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
-    y10=$(grep "^10Y Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
+    ac=$(grep "ACTION" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    w1=$(grep "^1W Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    m1=$(grep "^1M Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    m3=$(grep "^3M Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    m6=$(grep "^6M Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    yt=$(grep "^YTD Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    y1=$(grep "^1Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    y3=$(grep "^3Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    y5=$(grep "^5Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    y10=$(grep "^10Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
 
     if [ -n "$ac" ]; then
         # Determine Color Token for Action Status Column
@@ -138,7 +139,6 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
         echo "G|$line|ERROR|Y|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N" >> "$TMP_DASH"
     fi
     
-    rm -f "$REPO_ROOT/output.txt"
 done < "$WATCHLIST"
 
 # Helper to map a single token back to full ANSI code wrapper text

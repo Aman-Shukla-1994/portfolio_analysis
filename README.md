@@ -17,8 +17,8 @@ The scripts are intended for a Unix-like shell. On Windows, run them through WSL
 ### Analyze one symbol
 
 ```bash
-bash scripts/tranches.sh RELIANCE
-bash scripts/tranches.sh NIFTY
+bash scripts/stock.sh RELIANCE
+bash scripts/stock.sh NIFTY
 ```
 
 The symbol is normalized to uppercase. Regular stock symbols default to the Yahoo Finance `.NS` suffix. Common index aliases are mapped automatically, including:
@@ -36,7 +36,7 @@ Yahoo-style symbols can also be supplied directly when needed, such as `BRITANNI
 ### Run the holdings dashboard
 
 ```bash
-bash scripts/read_file.sh watchlists/holdings.txt
+bash scripts/compare.sh watchlists/holdings.txt
 ```
 
 `holdings.txt` contains one stock or index symbol per line. Blank lines are ignored. The dashboard analyzes every symbol, reports its 52-week low and high, preserves failed symbols as visible error rows, sorts results by the calculated action, and prints a colorized summary.
@@ -53,18 +53,18 @@ Available watchlists include:
 To use another watchlist:
 
 ```bash
-bash scripts/read_file.sh path/to/watchlist.txt
+bash scripts/compare.sh path/to/watchlist.txt
 ```
 
 To get the 52-week low and high for every configured index:
 
 ```bash
-bash scripts/read_file.sh watchlists/indices.txt
+bash scripts/compare.sh watchlists/indices.txt
 ```
 
 ## Output
 
-For each symbol, `tranches.sh` reports:
+For each symbol, `stock.sh` reports:
 
 - The latest completed trading-day close
 - The percentage distance of the current close above the 52-week low and below the 52-week high
@@ -98,14 +98,14 @@ The current close is classified into the interval containing it. The two sweet s
 There is no automated test suite or package manager. Run shell syntax checks before submitting changes:
 
 ```bash
-bash -n scripts/tranches.sh
-bash -n scripts/read_file.sh
+bash -n scripts/stock.sh
+bash -n scripts/compare.sh
 ```
 
 A network-backed smoke test for the calculator is:
 
 ```bash
-bash scripts/tranches.sh NIFTY
+bash scripts/stock.sh NIFTY
 ```
 
 ## GitHub Actions
@@ -114,13 +114,13 @@ The **Run watchlist dashboard** workflow can be started manually from the Action
 
 ## Files
 
-- `scripts/tranches.sh` - single-symbol data download, calculations, trend classification, and report generation.
-- `scripts/read_file.sh` - batch processing and colorized dashboard rendering.
+- `scripts/stock.sh` - single-symbol data download, calculations, trend classification, and report generation.
+- `scripts/compare.sh` - batch processing and colorized dashboard rendering.
 - `watchlists/holdings.txt` - default stock watchlist.
 - `watchlists/indices.txt` - index/watchlist aliases.
 - `.github/copilot-instructions.md` - repository-specific guidance for Copilot sessions.
 
-Generated scratch data such as `output.txt` is ignored by Git and should not be committed.
+The dashboard uses temporary files for intermediate output and does not create generated files in the repository.
 
 ## Data and limitations
 

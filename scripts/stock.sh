@@ -2,15 +2,15 @@
 
 # ============================================================
 # STOCK TRANCHE CALCULATOR
-# Usage: ./tranches.sh SYMBOL
-# Example: ./tranches.sh BSE
-#          ./tranches.sh RPPINFRA
+# Usage: ./stock.sh SYMBOL
+# Example: ./stock.sh BSE
+#          ./stock.sh RPPINFRA
 # ============================================================
 
 set -u
 
 if [ $# -ne 1 ]; then
-    echo "Usage: ./tranches.sh SYMBOL"
+    echo "Usage: ./stock.sh SYMBOL"
     exit 1
 fi
 
@@ -109,7 +109,12 @@ elif [ "$SYMBOL" = "SMLCAP250" ] || [ "$SYMBOL" = "NIFTY_SMLCAP_250" ] || [ "$SY
 
 # 5. USER MANUAL FALLBACK OVERRIDES
 elif [[ "$SYMBOL" == *.* ]] || [[ "$SYMBOL" == ^* ]]; then
-    YAHOO=$(echo "$SYMBOL" | sed 's/\^/%5E/g')
+    NSE_INDEX=""
+    YAHOO=$(python3 - "$SYMBOL" <<'PY'
+import sys, urllib.parse
+print(urllib.parse.quote(sys.argv[1], safe=''))
+PY
+)
 else
     YAHOO="${SYMBOL}.NS"
     NSE_INDEX=""
