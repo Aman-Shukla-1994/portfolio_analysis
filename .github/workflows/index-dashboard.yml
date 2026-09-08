@@ -1,0 +1,56 @@
+name: Run index dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      index:
+        description: Index alias from watchlists/indices.txt
+        required: true
+        type: choice
+        options:
+          - auto
+          - banknifty
+          - commodities
+          - consumption
+          - energy
+          - fmcg
+          - infra
+          - it
+          - media
+          - metal
+          - midcap150
+          - next50
+          - nifty
+          - pharma
+          - psubank
+          - realty
+          - sensex
+          - smlcap250
+
+run-name: Analyze index ${{ inputs.index }}
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze selected index
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate selected index
+        env:
+          INDEX_ALIAS: ${{ inputs.index }}
+        run: |
+          set -euo pipefail
+          grep -Fxq "$INDEX_ALIAS" watchlists/indices.txt
+
+      - name: Run index dashboard
+        env:
+          INDEX_ALIAS: ${{ inputs.index }}
+        run: |
+          set -o pipefail
+          bash scripts/index_dashboard.sh "$INDEX_ALIAS"

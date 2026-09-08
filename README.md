@@ -112,6 +112,8 @@ bash scripts/stock.sh NIFTY
 
 The **Run watchlist dashboard** workflow can be started manually from the Actions tab and exposes the current watchlists under `watchlists/`. The **Analyze single symbol** workflow accepts a string such as `BSE` or `NIFTY`. Each workflow retrieves live market data and uploads its report as a workflow artifact.
 
+The **Run index dashboard** workflow accepts an index alias from `watchlists/indices.txt` and runs `scripts/index_dashboard.sh` for that index. The selectable aliases are maintained from the same watchlist and validated again during the workflow run.
+
 ## Files
 
 - `scripts/stock.sh` - single-symbol data download, calculations, trend classification, and report generation.
