@@ -10,7 +10,10 @@ on:
         options:
           - indices.txt
           - holdings.txt
+          - investlist.txt
+          - ipo.txt
           - dividendStocks.txt
+          - globalndices.txt
 
 run-name: Analyze ${{ inputs.watchlist }}
 

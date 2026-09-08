@@ -41,6 +41,15 @@ bash scripts/read_file.sh watchlists/holdings.txt
 
 `holdings.txt` contains one stock or index symbol per line. Blank lines are ignored. The dashboard analyzes every symbol, reports its 52-week low and high, preserves failed symbols as visible error rows, sorts results by the calculated action, and prints a colorized summary.
 
+Available watchlists include:
+
+- `watchlists/holdings.txt`
+- `watchlists/indices.txt`
+- `watchlists/investlist.txt`
+- `watchlists/ipo.txt`
+- `watchlists/dividendStocks.txt`
+- `watchlists/globalndices.txt`
+
 To use another watchlist:
 
 ```bash
@@ -89,26 +98,26 @@ The current close is classified into the interval containing it. The two sweet s
 There is no automated test suite or package manager. Run shell syntax checks before submitting changes:
 
 ```bash
-bash -n tranches.sh
-bash -n read_file.sh
+bash -n scripts/tranches.sh
+bash -n scripts/read_file.sh
 ```
 
 A network-backed smoke test for the calculator is:
 
 ```bash
-bash tranches.sh NIFTY
+bash scripts/tranches.sh NIFTY
 ```
 
 ## GitHub Actions
 
-The **Run watchlist dashboard** workflow can be started manually from the Actions tab and provides exactly two watchlist choices: `holdings.txt` or `indices.txt`. The **Analyze single symbol** workflow accepts a string such as `BSE` or `NIFTY`. Each workflow retrieves live market data and uploads its report as a workflow artifact.
+The **Run watchlist dashboard** workflow can be started manually from the Actions tab and exposes the current watchlists under `watchlists/`. The **Analyze single symbol** workflow accepts a string such as `BSE` or `NIFTY`. Each workflow retrieves live market data and uploads its report as a workflow artifact.
 
 ## Files
 
-- `tranches.sh` - single-symbol data download, calculations, trend classification, and report generation.
-- `read_file.sh` - batch processing and colorized dashboard rendering.
-- `holdings.txt` - default stock watchlist.
-- `indices.txt` - index/watchlist aliases.
+- `scripts/tranches.sh` - single-symbol data download, calculations, trend classification, and report generation.
+- `scripts/read_file.sh` - batch processing and colorized dashboard rendering.
+- `watchlists/holdings.txt` - default stock watchlist.
+- `watchlists/indices.txt` - index/watchlist aliases.
 - `.github/copilot-instructions.md` - repository-specific guidance for Copilot sessions.
 
 Generated scratch data such as `output.txt` is ignored by Git and should not be committed.
