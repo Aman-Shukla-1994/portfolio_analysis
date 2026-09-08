@@ -30,4 +30,4 @@ jobs:
           WATCHLIST: ${{ inputs.watchlist }}
         run: |
           set -o pipefail
-          bash read_file.sh "$WATCHLIST"
+          bash scripts/read_file.sh "$WATCHLIST"

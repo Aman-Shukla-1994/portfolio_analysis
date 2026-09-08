@@ -27,4 +27,4 @@ jobs:
           SYMBOL: ${{ inputs.symbol }}
         run: |
           set -o pipefail
-          bash tranches.sh "${SYMBOL}"
+          bash scripts/tranches.sh "${SYMBOL}"

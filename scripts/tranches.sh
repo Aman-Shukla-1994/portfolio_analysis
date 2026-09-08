@@ -17,7 +17,7 @@ fi
 SYMBOL=$(echo "$1" | tr '[:lower:]' '[:upper:]')
 
 # ============================================================
-# WATCHLIST TRACKING ENGINE (ALL 18 INDICES MAPPED)
+# WATCHLIST TRACKING ENGINE (ALL 22 INDICES MAPPED)
 # ============================================================
 
 # 1. CORE MARKET BENCHMARKS & VOLATILITY
@@ -85,6 +85,14 @@ elif [ "$SYMBOL" = "MEDIA" ] || [ "$SYMBOL" = "NIFTYMEDIA" ]; then
     YAHOO="%5ECNXMEDIA"
     SYMBOL="NIFTY_MEDIA"
     NSE_INDEX="NIFTY MEDIA"
+elif [ "$SYMBOL" = "COMMODITIES" ] || [ "$SYMBOL" = "NIFTYCOMMODITIES" ]; then
+    YAHOO="%5ECNXCMDT"
+    SYMBOL="NIFTY_COMMODITIES"
+    NSE_INDEX="NIFTY COMMODITIES"
+elif [ "$SYMBOL" = "CONSUMPTION" ] || [ "$SYMBOL" = "NIFTYCONSUMPTION" ]; then
+    YAHOO="%5ECNXCONSUM"
+    SYMBOL="NIFTY_CONSUMPTION"
+    NSE_INDEX="NIFTY CONSUMPTION"
 
 # 4. BROAD MARKET MID & SMALL CAPS
 elif [ "$SYMBOL" = "MIDCAP150" ] || [ "$SYMBOL" = "NIFTY_MIDCAP_150" ] || [ "$SYMBOL" = "MIDCAP" ]; then

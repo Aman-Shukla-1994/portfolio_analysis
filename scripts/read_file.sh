@@ -1,7 +1,35 @@
 #!/bin/bash
 
-# Ensure an argument was given
-if [ -z "$1" ]; then
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+resolve_watchlist() {
+    local candidate="$1"
+
+    if [ -z "$candidate" ]; then
+        return 1
+    fi
+
+    if [ -f "$candidate" ]; then
+        printf '%s\n' "$candidate"
+        return 0
+    fi
+
+    if [ -f "$REPO_ROOT/$candidate" ]; then
+        printf '%s\n' "$REPO_ROOT/$candidate"
+        return 0
+    fi
+
+    if [ -f "$REPO_ROOT/watchlists/$candidate" ]; then
+        printf '%s\n' "$REPO_ROOT/watchlists/$candidate"
+        return 0
+    fi
+
+    return 1
+}
+
+WATCHLIST="$(resolve_watchlist "$1")"
+if [ -z "$WATCHLIST" ]; then
     echo "Usage: $0 <filename>"
     exit 1
 fi
@@ -18,7 +46,7 @@ trap 'rm -f "$TMP_DASH"' EXIT
 
 # Print a structured header row with clean alignment spacing
 printf "%-15s %-25s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s\n" \
-    "SYMBOL" "ACTION" "52W H" "52W L" "1W" "1M" "3M" "6M" "YTD" "1Y" "3Y" "5Y" "10Y"
+    "SYMBOL" "ACTION" "52W-H" "52W-L" "1W" "1M" "3M" "6M" "YTD" "1Y" "3Y" "5Y" "10Y"
 echo "-----------------------------------------------------------------------------------------------------------------------------------"
 
 # Function to add color tokens to text based on indicators
@@ -42,23 +70,23 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     fi
 
     # Run script and retain the exit status so failed symbols remain visible.
-    bash tranches.sh "$line" > output.txt 2>&1
+    bash "$SCRIPT_DIR/tranches.sh" "$line" > "$REPO_ROOT/output.txt" 2>&1
     tranche_status=$?
 
     # Pull the percentage distance from the 52-week range.
-    lo52=$(grep "From 52W Low" output.txt | cut -d : -f2 | xargs)
-    hi52=$(grep "From 52W High" output.txt | cut -d : -f2 | xargs)
+    lo52=$(grep "From 52W Low" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
+    hi52=$(grep "From 52W High" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
 
-    ac=$(grep "ACTION" output.txt | cut -d : -f2 | xargs)
-    w1=$(grep "^1W Return" output.txt | cut -d : -f2 | xargs)
-    m1=$(grep "^1M Return" output.txt | cut -d : -f2 | xargs)
-    m3=$(grep "^3M Return" output.txt | cut -d : -f2 | xargs)
-    m6=$(grep "^6M Return" output.txt | cut -d : -f2 | xargs)
-    yt=$(grep "^YTD Return" output.txt | cut -d : -f2 | xargs)
-    y1=$(grep "^1Y Return" output.txt | cut -d : -f2 | xargs)
-    y3=$(grep "^3Y Return" output.txt | cut -d : -f2 | xargs)
-    y5=$(grep "^5Y Return" output.txt | cut -d : -f2 | xargs)
-    y10=$(grep "^10Y Return" output.txt | cut -d : -f2 | xargs)
+    ac=$(grep "ACTION" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
+    w1=$(grep "^1W Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
+    m1=$(grep "^1M Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
+    m3=$(grep "^3M Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
+    m6=$(grep "^6M Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
+    yt=$(grep "^YTD Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
+    y1=$(grep "^1Y Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
+    y3=$(grep "^3Y Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
+    y5=$(grep "^5Y Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
+    y10=$(grep "^10Y Return" "$REPO_ROOT/output.txt" | cut -d : -f2 | xargs)
 
     if [ -n "$ac" ]; then
         # Determine Color Token for Action Status Column
@@ -110,8 +138,8 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
         echo "G|$line|ERROR|Y|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N" >> "$TMP_DASH"
     fi
     
-    rm -f output.txt
-done < "$1"
+    rm -f "$REPO_ROOT/output.txt"
+done < "$WATCHLIST"
 
 # Helper to map a single token back to full ANSI code wrapper text
 apply_color() {

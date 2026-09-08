@@ -17,8 +17,8 @@ The scripts are intended for a Unix-like shell. On Windows, run them through WSL
 ### Analyze one symbol
 
 ```bash
-bash tranches.sh RELIANCE
-bash tranches.sh NIFTY
+bash scripts/tranches.sh RELIANCE
+bash scripts/tranches.sh NIFTY
 ```
 
 The symbol is normalized to uppercase. Regular stock symbols default to the Yahoo Finance `.NS` suffix. Common index aliases are mapped automatically, including:
@@ -27,6 +27,7 @@ The symbol is normalized to uppercase. Regular stock symbols default to the Yaho
 - `SENSEX`
 - `BANKNIFTY` / `NIFTYBANK`
 - `IT`, `AUTO`, `FMCG`, `PHARMA`, `METAL`, `REALTY`, `ENERGY`, `INFRA`, `MEDIA`
+- `CHEMICALS`, `COMMODITIES`, `CONSUMPTION`, `FINSERVICE`
 - `PSUBANK`, `NEXT50`, `VIX`
 - `MIDCAP150` and `SMLCAP250`
 
@@ -35,7 +36,7 @@ Yahoo-style symbols can also be supplied directly when needed, such as `BRITANNI
 ### Run the holdings dashboard
 
 ```bash
-bash read_file.sh holdings.txt
+bash scripts/read_file.sh watchlists/holdings.txt
 ```
 
 `holdings.txt` contains one stock or index symbol per line. Blank lines are ignored. The dashboard analyzes every symbol, reports its 52-week low and high, preserves failed symbols as visible error rows, sorts results by the calculated action, and prints a colorized summary.
@@ -43,13 +44,13 @@ bash read_file.sh holdings.txt
 To use another watchlist:
 
 ```bash
-bash read_file.sh path/to/watchlist.txt
+bash scripts/read_file.sh path/to/watchlist.txt
 ```
 
 To get the 52-week low and high for every configured index:
 
 ```bash
-bash read_file.sh indices.txt
+bash scripts/read_file.sh watchlists/indices.txt
 ```
 
 ## Output
