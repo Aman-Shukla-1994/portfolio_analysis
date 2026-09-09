@@ -17,16 +17,3 @@ Midhani
 Paras
 SolarInds
 ZenTec
-
-maninfra
-HINDZINC
-hindcopper
-lichsgfin
-dlf
-
-esds
-tempsens
-priority
-deepa
-indomim
-dhoottrans
