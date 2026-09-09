@@ -12,7 +12,7 @@ on:
           - indices.txt
           - defence.txt
           - dividendStocks.txt
-          - globallndices.txt
+          - globalIndices.txt
           - holdings.txt
           - ipo.txt
 
