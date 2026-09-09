@@ -23,3 +23,10 @@ HINDZINC
 hindcopper
 lichsgfin
 dlf
+
+esds
+tempsens
+priority
+deepa
+indomim
+dhoottrans
