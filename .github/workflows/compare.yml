@@ -7,7 +7,14 @@ on:
       watchlist:
         description: Watchlist to analyze
         required: true
-        type: string
+        type: choice
+        options:
+          - indices.txt
+          - defence.txt
+          - dividendStocks.txt
+          - globallndices.txt
+          - holdings.txt
+          - ipo.txt
 
 permissions:
   contents: read
