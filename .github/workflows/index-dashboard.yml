@@ -1,4 +1,5 @@
-name: Run index dashboard
+name: Analyse index
+run-name: Analyze index ${{ inputs.index }}
 
 on:
   workflow_dispatch:
@@ -27,14 +28,12 @@ on:
           - sensex
           - smlcap250
 
-run-name: Analyze index ${{ inputs.index }}
-
 permissions:
   contents: read
 
 jobs:
   analyze:
-    name: Analyze selected index
+    name: Analyze ${{ inputs.index }} index
     runs-on: ubuntu-latest
 
     steps:

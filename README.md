@@ -14,14 +14,15 @@ The scripts are intended for a Unix-like shell. On Windows, run them through WSL
 
 ## Usage
 
-### Analyze one symbol
+### Analyze one or more symbols
 
 ```bash
 bash scripts/stock.sh RELIANCE
 bash scripts/stock.sh NIFTY
+bash scripts/stock.sh "RELIANCE,TCS,NIFTY"
 ```
 
-The symbol is normalized to uppercase. Regular stock symbols default to the Yahoo Finance `.NS` suffix. Common index aliases are mapped automatically, including:
+The symbol is normalized to uppercase. You may provide a single symbol, multiple separate arguments, or a single comma-separated string. Regular stock symbols default to the Yahoo Finance `.NS` suffix. Common index aliases are mapped automatically, including:
 
 - `NIFTY` / `NIFTY50`
 - `SENSEX`
@@ -68,13 +69,13 @@ For each symbol, `stock.sh` reports:
 
 - The latest completed trading-day close
 - The percentage distance of the current close above the 52-week low and below the 52-week high
-- 1-week, 2-week, and 3-week trading returns
-- 1-month, 2-month, 3-month, 4.5-month, 6-month, 9-month, and YTD returns
-- 1-year through 5-year returns
+- 1-week and 2-week momentum returns
+- 1-month, 3-month, 4.5-month, 6-month, 9-month, and YTD returns
+- 1-year, 3-year, 5-year, 7.5-year, 10-year, and 15-year returns
 - Short-, medium-, and long-term trend classifications
-- An overall action such as `ACCUMULATE - UPTREND`, `CAUTIOUS ACCUMULATION`, or `WAIT - DOWNTREND`
-- T0 through T4 tranche levels and two intermediate sweet spots
-- The current tranche and distance from the 52-week high/low
+- An overall action such as `BUY - BREAKOUT ABOVE R1`, `ACCUMULATE - UPTREND`, or `WAIT - DOWNTREND`
+- The 52-week tranche levels: `L`, `T1`, `M`, `T2`, `H`
+- The current tranche and pivot levels (`Pivot Point`, `R1`, `S1`, `R2`, `S2`)
 
 The calculator downloads a 10-year daily history and overlays a recent 10-day download so the latest available sessions are refreshed. Data is converted to India Standard Time before trading dates are selected. For recognized NSE indices, the displayed 52-week high and low use the official NSE `allIndices` range; Yahoo Finance remains the source for the historical return calculations. Stock symbols and the SENSEX continue to use Yahoo high/low data.
 
@@ -91,7 +92,25 @@ T2 = T0 + 2 * step
 T3 = T0 + 3 * step
 ```
 
-The current close is classified into the interval containing it. The two sweet spots are the midpoints of T1-T2 and T2-T3.
+The current close is classified into the interval containing it. The display labels are simplified to `L`, `T1`, `M`, `T2`, and `H` so the user sees a compact trading ladder rather than the older T0/T1/T2/T3/T4 naming.
+
+## Pivot trigger logic
+
+The script also calculates a daily pivot setup using the latest bar:
+
+```text
+Pivot Point = (High + Low + Close) / 3
+R1 = 2 * Pivot Point - Low
+S1 = 2 * Pivot Point - High
+R2 = Pivot Point + (High - Low)
+S2 = Pivot Point - (High - Low)
+```
+
+The breakout and breakdown trigger levels are still used for interpretation:
+
+- price above `R1` strengthens the bullish case
+- price below `S1` strengthens the bearish case
+- price between them is treated as a wait / accumulate zone
 
 ## Development checks
 
@@ -110,7 +129,7 @@ bash scripts/stock.sh NIFTY
 
 ## GitHub Actions
 
-The **Run watchlist dashboard** workflow can be started manually from the Actions tab and exposes the current watchlists under `watchlists/`. The **Analyze single symbol** workflow accepts a string such as `BSE` or `NIFTY`. Each workflow retrieves live market data and uploads its report as a workflow artifact.
+The **Run watchlist dashboard** workflow can be started manually from the Actions tab and exposes the current watchlists under `watchlists/`. The **Analyze stock symbols** workflow accepts a comma-separated string such as `RELIANCE, TCS, NIFTY` and runs the calculator for each symbol in order. Each workflow retrieves live market data and uploads its report as a workflow artifact.
 
 The **Run index dashboard** workflow accepts an index alias from `watchlists/indices.txt` and runs `scripts/index_dashboard.sh` for that index. The selectable aliases are maintained from the same watchlist and validated again during the workflow run.
 

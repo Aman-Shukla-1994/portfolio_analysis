@@ -1,11 +1,11 @@
-name: Analyze single symbol
-run-name: Analyze ${{ inputs.symbol }}
+name: Analyze stocks
+run-name: Analyze ${{ inputs.symbols }}
 
 on:
   workflow_dispatch:
     inputs:
-      symbol:
-        description: Stock or index symbol, for example BSE or NIFTY
+      symbols:
+        description: Comma-separated stock or index symbols, for example RELIANCE, TCS, NIFTY
         required: true
         type: string
 
@@ -14,17 +14,32 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze ${{ inputs.symbol }}
+    name: Analyze ${{ inputs.symbols }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Run tranche calculator
+      - name: Run stock analysis
         env:
           GH_TOKEN: ${{ github.token }}
-          SYMBOL: ${{ inputs.symbol }}
+          SYMBOLS: ${{ inputs.symbols }}
         run: |
           set -o pipefail
-          bash scripts/stock.sh "${SYMBOL}"
+
+          IFS=',' read -r -a SYMBOL_LIST <<< "${SYMBOLS}"
+
+          for raw_symbol in "${SYMBOL_LIST[@]}"; do
+            symbol="$(echo "${raw_symbol}" | xargs | tr '[:lower:]' '[:upper:]')"
+
+            if [ -z "${symbol}" ]; then
+              continue
+            fi
+
+            echo "============================================================"
+            echo "Running stock.sh for: ${symbol}"
+            echo "============================================================"
+            bash scripts/stock.sh "${symbol}"
+            echo
+          done

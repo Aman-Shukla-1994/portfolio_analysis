@@ -46,8 +46,8 @@ TMP_OUTPUT=$(mktemp)
 trap 'rm -f "$TMP_DASH" "$TMP_OUTPUT"' EXIT
 
 # Print a structured header row with clean alignment spacing
-printf "%-15s %-25s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s\n" \
-    "SYMBOL" "ACTION" "52W-H" "52W-L" "1W" "1M" "3M" "6M" "YTD" "1Y" "3Y" "5Y" "10Y"
+printf "%-15s %-25s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s\n" \
+    "SYMBOL" "ACTION" "52W-H" "1W" "1M" "3M" "6M" "YTD" "1Y" "5Y" "R1" "S1" "R2" "S2"
 echo "-----------------------------------------------------------------------------------------------------------------------------------"
 
 # Function to add color tokens to text based on indicators
@@ -85,22 +85,28 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     m6=$(grep "^6M Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
     yt=$(grep "^YTD Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
     y1=$(grep "^1Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
-    y3=$(grep "^3Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
     y5=$(grep "^5Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    r1=$(grep "^R1" "$TMP_OUTPUT" | sed -E 's/.*Rs\. ([0-9]+\.[0-9]+).*/\1/' | xargs)
+    s1=$(grep "^S1" "$TMP_OUTPUT" | sed -E 's/.*Rs\. ([0-9]+\.[0-9]+).*/\1/' | xargs)
+    r2=$(grep "^R2" "$TMP_OUTPUT" | sed -E 's/.*Rs\. ([0-9]+\.[0-9]+).*/\1/' | xargs)
+    s2=$(grep "^S2" "$TMP_OUTPUT" | sed -E 's/.*Rs\. ([0-9]+\.[0-9]+).*/\1/' | xargs)
+    hi52=$(grep "From 52W High" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+
+    # Backward compatibility with older fields if needed
+    y3=$(grep "^3Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
     y10=$(grep "^10Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
 
     if [ -n "$ac" ]; then
         # Determine Color Token for Action Status Column
-        if [[ "$ac" == *"ACCUMULATE"* ]]; then
+        if [[ "$ac" == *"BUY"* ]] || [[ "$ac" == *"ACCUMULATE"* ]]; then
             col_tok="G"
-        elif [[ "$ac" == *"WAIT"* ]] || [[ "$ac" == *"CAUTION"* ]]; then
+        elif [[ "$ac" == *"SELL"* ]] || [[ "$ac" == *"WAIT"* ]] || [[ "$ac" == *"CAUTION"* ]]; then
             col_tok="R"
         else
             col_tok="Y"
         fi
 
         # Get color tokens for percentages
-        t_lo52=$(get_color_token "$lo52")
         t_hi52=$(get_color_token "$hi52")
         t_w1=$(get_color_token "$w1")
         t_m1=$(get_color_token "$m1")
@@ -108,32 +114,40 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
         t_m6=$(get_color_token "$m6")
         t_yt=$(get_color_token "$yt")
         t_y1=$(get_color_token "$y1")
-        t_y3=$(get_color_token "$y3")
         t_y5=$(get_color_token "$y5")
+        t_r1=$(get_color_token "$r1")
+        t_s1=$(get_color_token "$s1")
+        t_r2=$(get_color_token "$r2")
+        t_s2=$(get_color_token "$s2")
+        t_y3=$(get_color_token "$y3")
         t_y10=$(get_color_token "$y10")
 
         # =========================================================================
         # REVISED ACTION SORTING PRIORITY LIST
         # =========================================================================
-        if [[ "$ac" == "ACCUMULATE - UPTREND" ]]; then
+        if [[ "$ac" == "BUY - BREAKOUT ABOVE R1" ]]; then
             rank="A"
-        elif [[ "$ac" == "CAUTIOUS ACCUMULATION" ]]; then
+        elif [[ "$ac" == "ACCUMULATE - UPTREND" ]]; then
             rank="B"
-        elif [[ "$ac" == "CAUTION - BEARISH BIAS" ]]; then
+        elif [[ "$ac" == "CAUTIOUS ACCUMULATION" ]]; then
             rank="C"
-        elif [[ "$ac" == "MIXED - WAIT" ]]; then
+        elif [[ "$ac" == "CAUTION - BEARISH BIAS" ]]; then
             rank="D"
-        elif [[ "$ac" == "WAIT - DOWNTREND" ]]; then
+        elif [[ "$ac" == "MIXED - WAIT" ]]; then
             rank="E"
-        elif [[ "$ac" == "WAIT - STRONG DOWNTREND" ]]; then
+        elif [[ "$ac" == "WAIT - DOWNTREND" ]]; then
             rank="F"
+        elif [[ "$ac" == "WAIT - STRONG DOWNTREND" ]]; then
+            rank="G"
+        elif [[ "$ac" == "SELL - BREAKDOWN BELOW S1" ]]; then
+            rank="H"
         else
             # Fallback for unexpected labels
-            rank="G"
+            rank="I"
         fi
 
         # Save raw values alongside color map blueprints to temporary file
-        echo "$rank|$line|$ac|$col_tok|$hi52|$t_hi52|$lo52|$t_lo52|$w1|$t_w1|$m1|$t_m1|$m3|$t_m3|$m6|$t_m6|$yt|$t_yt|$y1|$t_y1|$y3|$t_y3|$y5|$t_y5|$y10|$t_y10" >> "$TMP_DASH"
+        echo "$rank|$line|$ac|$col_tok|$hi52|$t_hi52|$w1|$t_w1|$m1|$t_m1|$m3|$t_m3|$m6|$t_m6|$yt|$t_yt|$y1|$t_y1|$y5|$t_y5|$r1|$t_r1|$s1|$t_s1|$r2|$t_r2|$s2|$t_s2" >> "$TMP_DASH"
     elif [ "$tranche_status" -ne 0 ]; then
         # Do not silently discard symbols whose market data could not be read.
         echo "G|$line|ERROR|Y|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N" >> "$TMP_DASH"
@@ -152,7 +166,7 @@ apply_color() {
 }
 
 # Read, sort by priority rank field (A -> B -> C -> D -> E -> F), and print
-sort -t'|' -k1,1 "$TMP_DASH" | while IFS='|' read -r r symbol action c_tok hi52 t_hi52 lo52 t_lo52 w1 t_w1 m1 t_m1 m3 t_m3 m6 t_m6 yt t_yt y1 t_y1 y3 t_y3 y5 t_y5 y10 t_y10; do
+sort -t'|' -k1,1 "$TMP_DASH" | while IFS='|' read -r r symbol action c_tok hi52 t_hi52 w1 t_w1 m1 t_m1 m3 t_m3 m6 t_m6 yt t_yt y1 t_y1 y5 t_y5 r1 t_r1 s1 t_s1 r2 t_r2 s2 t_s2; do
     # Print out the base symbols
     printf "%-15s " "$symbol"
     
@@ -160,20 +174,21 @@ sort -t'|' -k1,1 "$TMP_DASH" | while IFS='|' read -r r symbol action c_tok hi52 
     if [ "$c_tok" = "G" ]; then echo -ne "${GREEN}"; elif [ "$c_tok" = "R" ]; then echo -ne "${RED}"; else echo -ne "${YELLOW}"; fi
     printf "%-25s${NC} " "$action"
 
-    # Render the percentage distance from the 52-week range.
+    # Down from the 52-week high
     apply_color "$(printf "%-8s" "$hi52")" "$t_hi52"; echo -n " "
-    apply_color "$(printf "%-8s" "$lo52")" "$t_lo52"; echo -n " "
 
-    # Render remaining timeline percentage columns individually
+    # Render remaining selected metric columns individually
     apply_color "$(printf "%-8s" "$w1")" "$t_w1"; echo -n " "
     apply_color "$(printf "%-8s" "$m1")" "$t_m1"; echo -n " "
     apply_color "$(printf "%-8s" "$m3")" "$t_m3"; echo -n " "
     apply_color "$(printf "%-8s" "$m6")" "$t_m6"; echo -n " "
     apply_color "$(printf "%-8s" "$yt")" "$t_yt"; echo -n " "
     apply_color "$(printf "%-8s" "$y1")" "$t_y1"; echo -n " "
-    apply_color "$(printf "%-8s" "$y3")" "$t_y3"; echo -n " "
     apply_color "$(printf "%-8s" "$y5")" "$t_y5"; echo -n " "
-    apply_color "$(printf "%-8s" "$y10")" "$t_y10"; echo ""
+    apply_color "$(printf "%-8s" "$r1")" "$t_r1"; echo -n " "
+    apply_color "$(printf "%-8s" "$s1")" "$t_s1"; echo -n " "
+    apply_color "$(printf "%-8s" "$r2")" "$t_r2"; echo -n " "
+    apply_color "$(printf "%-8s" "$s2")" "$t_s2"; echo ""
 done
 
 rm -f "$TMP_DASH"

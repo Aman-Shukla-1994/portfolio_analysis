@@ -9,12 +9,38 @@
 
 set -u
 
-if [ $# -ne 1 ]; then
-    echo "Usage: ./stock.sh SYMBOL"
+if [ $# -eq 0 ]; then
+    echo "Usage: ./stock.sh SYMBOL[,SYMBOL2,...]"
     exit 1
 fi
 
+if [ $# -gt 1 ] || [[ "$1" == *,* ]]; then
+    for raw_arg in "$@"; do
+        IFS=',' read -r -a PARTS <<< "$raw_arg"
+        for part in "${PARTS[@]}"; do
+            symbol=$(echo "$part" | xargs)
+            if [ -n "$symbol" ]; then
+                bash "$0" "$symbol"
+            fi
+        done
+    done
+    exit 0
+fi
+
 SYMBOL=$(echo "$1" | tr '[:lower:]' '[:upper:]')
+
+print_symbol_banner() {
+    local label="$1"
+    local border
+    border=$(printf '%*s' "$(( ${#label} + 12 ))" '' | tr ' ' '=')
+
+    echo
+    printf '\033[1;32m%s\033[0m\n' "$border"
+    printf '\033[1;33m  %s  \033[0m\n' "$label"
+    printf '\033[1;32m%s\033[0m\n\n' "$border"
+}
+
+print_symbol_banner "$SYMBOL"
 
 # ============================================================
 # WATCHLIST TRACKING ENGINE (ALL 22 INDICES MAPPED)
@@ -460,13 +486,6 @@ ret_10d = trading_return(
     10
 )
 
-ret_15d = trading_return(
-    data,
-    ref_date,
-    ref_close,
-    15
-)
-
 
 # ============================================================
 # CALENDAR RETURN
@@ -591,12 +610,11 @@ def yearly_return(years):
 
 
 ret_1y = yearly_return(1)
-ret_2y = yearly_return(2)
 ret_3y = yearly_return(3)
-ret_4y = yearly_return(4)
 ret_5y = yearly_return(5)
 ret_7_5y = yearly_return(7.5)
 ret_10y = yearly_return(10)
+ret_15y = yearly_return(15)
 
 
 # ============================================================
@@ -659,13 +677,11 @@ def medium_long_trend(values):
 
 short_trend = short_trend([
     ret_5d,
-    ret_10d,
-    ret_15d
+    ret_10d
 ])
 
 medium_trend = medium_long_trend([
     ret_1m,
-    ret_2m,
     ret_3m,
     ret_45m,
     ret_6m,
@@ -674,11 +690,27 @@ medium_trend = medium_long_trend([
 
 long_trend = medium_long_trend([
     ret_1y,
-    ret_2y,
     ret_3y,
-    ret_4y,
-    ret_5y
+    ret_5y,
+    ret_7_5y,
+    ret_10y,
+    ret_15y
 ])
+
+pivot_high = high_data.get(ref_date, ref_close)
+pivot_low = low_data.get(ref_date, ref_close)
+pivot_close = ref_close
+pivot_point = (pivot_high + pivot_low + pivot_close) / 3
+r1 = (2 * pivot_point) - pivot_low
+s1 = (2 * pivot_point) - pivot_high
+r2 = pivot_point + (pivot_high - pivot_low)
+s2 = pivot_point - (pivot_high - pivot_low)
+
+pivot_bias = "WAIT"
+if ref_close > r1:
+    pivot_bias = "BUY-ABOVE-R1"
+elif ref_close < s1:
+    pivot_bias = "SELL-BELOW-S1"
 
 
 # ============================================================
@@ -697,8 +729,23 @@ bullish_count = sum([
     long_trend in ["STRONG BULLISH", "BULLISH"]
 ])
 
+if (
+    ref_close > r1
+    and short_trend == "BULLISH MOMENTUM"
+    and medium_trend in ["BULLISH", "STRONG BULLISH"]
+    and long_trend in ["BULLISH", "STRONG BULLISH"]
+):
+    action = "BUY - BREAKOUT ABOVE R1"
 
-if bearish_count >= 2 and bullish_count == 0:
+elif (
+    ref_close < s1
+    and short_trend == "BEARISH MOMENTUM"
+    and medium_trend in ["BEARISH", "STRONG BEARISH"]
+    and long_trend in ["BEARISH", "STRONG BEARISH"]
+):
+    action = "SELL - BREAKDOWN BELOW S1"
+
+elif bearish_count >= 2 and bullish_count == 0:
 
     if (
         short_trend == "BEARISH MOMENTUM"
@@ -726,7 +773,7 @@ else:
 
 
 # ============================================================
-# TRANCHE LEVELS & SWEET SPOTS
+# TRANCHE LEVELS
 # ============================================================
 
 T0 = low_52
@@ -738,36 +785,41 @@ T1 = T0 + step
 T2 = T0 + step * 2
 T3 = T0 + step * 3
 
-sweet_spot_1 = (T1 + T2) / 2
-sweet_spot_2 = (T2 + T3) / 2
-
-dist_ss1 = return_pct(sweet_spot_1, ref_close)
-dist_ss2 = return_pct(sweet_spot_2, ref_close)
-
 
 def tranche_position(price):
 
     if price <= T0:
-        return "T0"
+        return "L"
 
     if price < T1:
-        return "T0-T1"
-
-    if price < T2:
-        return "T1-T2"
+        return "L-T1"
 
     if price < T3:
-        return "T2-T3"
+        return "M-T2"
 
     if price < T4:
-        return "T3-T4"
+        return "T2-H"
 
-    return "T4"
+    return "H"
 
 
 current_tranche = tranche_position(
     ref_close
 )
+
+# Support / resistance zones built on the same 52-week tranche model.
+strong_support = T1
+support_zone_low = T0
+support_zone_high = T1
+
+strong_resistance = T3
+resistance_zone_low = T3
+resistance_zone_high = T4
+
+buy_zone_low = support_zone_low
+buy_zone_high = strong_support
+sell_zone_low = strong_resistance
+sell_zone_high = resistance_zone_high
 
 from_low = return_pct(
     ref_close,
@@ -779,14 +831,11 @@ from_high = return_pct(
     high_52
 )
 
-
 # ============================================================
 # OUTPUT
 # ============================================================
 
-print()
 print("=================================================")
-print(f"Stock           : {SYMBOL}")
 print(f"Reference Date  : {ref_date}")
 print(f"Reference Close : Rs. {ref_close:.2f}")
 print("-------------------------------------------------")
@@ -803,7 +852,6 @@ print("             SHORT-TERM MOMENTUM")
 print("=================================================")
 print(f"1W Return       : {fmt_pct(ret_5d)}")
 print(f"2W Return       : {fmt_pct(ret_10d)}")
-print(f"3W Return       : {fmt_pct(ret_15d)}")
 print("-------------------------------------------------")
 print(f"Short Trend     : {short_trend}")
 
@@ -812,7 +860,6 @@ print("=================================================")
 print("              MEDIUM-TERM RETURNS")
 print("=================================================")
 print(f"1M Return       : {fmt_pct(ret_1m)}")
-print(f"2M Return       : {fmt_pct(ret_2m)}")
 print(f"3M Return       : {fmt_pct(ret_3m)}")
 print(f"4.5M Return     : {fmt_pct(ret_45m)}")
 print(f"6M Return       : {fmt_pct(ret_6m)}")
@@ -826,12 +873,11 @@ print("=================================================")
 print("               LONG-TERM RETURNS")
 print("=================================================")
 print(f"1Y Return       : {fmt_pct(ret_1y)}")
-print(f"2Y Return       : {fmt_pct(ret_2y)}")
 print(f"3Y Return       : {fmt_pct(ret_3y)}")
-print(f"4Y Return       : {fmt_pct(ret_4y)}")
 print(f"5Y Return       : {fmt_pct(ret_5y)}")
 print(f"7.5Y Return     : {fmt_pct(ret_7_5y)}")
 print(f"10Y Return      : {fmt_pct(ret_10y)}")
+print(f"15Y Return      : {fmt_pct(ret_15y)}")
 print("-------------------------------------------------")
 print(f"Long Trend      : {long_trend}")
 
@@ -843,17 +889,21 @@ print("=================================================")
 print("=================================================")
 print("                TRANCHE LEVELS")
 print("=================================================")
-print(f"T0              : Rs. {T0:.2f}")
+print(f"L               : Rs. {T0:.2f}")
 print(f"T1              : Rs. {T1:.2f}")
-print(f"T2              : Rs. {T2:.2f}")
-print(f"T3              : Rs. {T3:.2f}")
-print(f"T4              : Rs. {T4:.2f}")
+print(f"M               : Rs. {T2:.2f}")
+print(f"T2              : Rs. {T3:.2f}")
+print(f"H               : Rs. {T4:.2f}")
 print("-------------------------------------------------")
 print(f"Reference Close : Rs. {ref_close:.2f}")
 print(f"Current Tranche : {current_tranche}")
 print("-------------------------------------------------")
-print(f"Sweet Spot 1    : Rs. {sweet_spot_1:.2f} ({fmt_pct(dist_ss1)}) [T1-T2 Mid]")
-print(f"Sweet Spot 2    : Rs. {sweet_spot_2:.2f} ({fmt_pct(dist_ss2)}) [T2-T3 Mid]")
+print(f"Pivot Point     : Rs. {pivot_point:.2f}")
+print(f"R1              : Rs. {r1:.2f} [Breakout buy trigger]")
+print(f"S1              : Rs. {s1:.2f} [Breakdown sell trigger]")
+print(f"R2              : Rs. {r2:.2f} [Target / extension]")
+print(f"S2              : Rs. {s2:.2f} [Stop / panic zone]")
+print(f"Pivot Bias      : {pivot_bias}")
 print()
 
 PY

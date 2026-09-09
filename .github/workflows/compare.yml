@@ -1,4 +1,5 @@
-name: Run watchlist dashboard
+name: Analyze watchlist
+run-name: Analyze ${{ inputs.watchlist }}
 
 on:
   workflow_dispatch:
@@ -8,14 +9,12 @@ on:
         required: true
         type: string
 
-run-name: Analyze ${{ inputs.watchlist }}
-
 permissions:
   contents: read
 
 jobs:
   analyze:
-    name: Analyze selected watchlist
+    name: Analyze ${{ inputs.watchlist }}
     runs-on: ubuntu-latest
 
     steps:
