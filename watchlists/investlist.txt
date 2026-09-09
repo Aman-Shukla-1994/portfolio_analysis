@@ -17,3 +17,9 @@ Midhani
 Paras
 SolarInds
 ZenTec
+
+maninfra
+HINDZINC
+hindcopper
+lichsgfin
+dlf
