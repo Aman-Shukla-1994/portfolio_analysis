@@ -6,14 +6,7 @@ on:
       watchlist:
         description: Watchlist to analyze
         required: true
-        type: choice
-        options:
-          - indices.txt
-          - holdings.txt
-          - investlist.txt
-          - ipo.txt
-          - dividendStocks.txt
-          - globalndices.txt
+        type: string
 
 run-name: Analyze ${{ inputs.watchlist }}
 
