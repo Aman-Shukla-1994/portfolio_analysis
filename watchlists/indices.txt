@@ -2,12 +2,12 @@ auto
 banknifty
 commodities
 consumption
-energy
+niftyenergy
 fmcg
 infra
 it
 media
-metal
+niftymetal
 midcap150
 next50
 nifty
