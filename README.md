@@ -22,15 +22,28 @@ bash scripts/stock.sh NIFTY
 bash scripts/stock.sh "RELIANCE,TCS,NIFTY"
 ```
 
-The symbol is normalized to uppercase. You may provide a single symbol, multiple separate arguments, or a single comma-separated string. Regular stock symbols default to the Yahoo Finance `.NS` suffix. Common index aliases are mapped automatically, including:
+The symbol is normalized to uppercase. You may provide a single symbol, multiple separate arguments, or a single comma-separated string. Regular stock symbols default to the Yahoo Finance `.NS` suffix. The repo follows a consistent Nifty-prefixed naming scheme for Nifty-linked indices. Canonical names in `watchlists/indices.txt` are:
 
-- `NIFTY` / `NIFTY50`
-- `SENSEX`
-- `BANKNIFTY` / `NIFTYBANK`
-- `IT`, `AUTO`, `FMCG`, `PHARMA`, `METAL`, `REALTY`, `ENERGY`, `INFRA`, `MEDIA`
-- `CHEMICALS`, `COMMODITIES`, `CONSUMPTION`, `FINSERVICE`
-- `PSUBANK`, `NEXT50`, `VIX`
-- `MIDCAP150` and `SMLCAP250`
+- `nifty50`
+- `niftyauto`
+- `niftybank`
+- `niftycommodities`
+- `niftyconsumption`
+- `niftyenergy`
+- `niftyfmcg`
+- `niftyinfra`
+- `niftyit`
+- `niftymedia`
+- `niftymetal`
+- `niftymidcap150`
+- `niftynext50`
+- `niftypharma`
+- `niftypsubank`
+- `niftyrealty`
+- `niftysmallcap250`
+- `sensex`
+
+Older shorthand names such as `nifty`, `banknifty`, `metal`, and `smlcap250` remain accepted for compatibility, but the canonical repo convention is the `nifty...` prefix.
 
 Yahoo-style symbols can also be supplied directly when needed, such as `BRITANNIA.NS` or a symbol beginning with `^`.
 
