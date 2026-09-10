@@ -51,7 +51,7 @@ fi
 # Try to use a dedicated watchlist file if one already exists for this alias.
 if [ -f "$REPO_ROOT/watchlists/${INDEX_ALIAS}.txt" ]; then
     cp "$REPO_ROOT/watchlists/${INDEX_ALIAS}.txt" "$TMP_INDEX_FILE"
-    bash "$SCRIPT_DIR/compare.sh" "$TMP_INDEX_FILE"
+    bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"
     exit 0
 fi
 
@@ -93,4 +93,4 @@ if [ ! -s "$TMP_INDEX_FILE" ]; then
     exit 1
 fi
 
-bash "$SCRIPT_DIR/compare.sh" "$TMP_INDEX_FILE"
+bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"

@@ -37,7 +37,7 @@ Yahoo-style symbols can also be supplied directly when needed, such as `BRITANNI
 ### Run the holdings dashboard
 
 ```bash
-bash scripts/compare.sh watchlists/holdings.txt
+bash scripts/watchlist.sh watchlists/holdings.txt
 ```
 
 `holdings.txt` contains one stock or index symbol per line. Blank lines are ignored. The dashboard analyzes every symbol, reports its 52-week low and high, preserves failed symbols as visible error rows, sorts results by the calculated action, and prints a colorized summary.
@@ -54,13 +54,13 @@ Available watchlists include:
 To use another watchlist:
 
 ```bash
-bash scripts/compare.sh path/to/watchlist.txt
+bash scripts/watchlist.sh path/to/watchlist.txt
 ```
 
 To get the 52-week low and high for every configured index:
 
 ```bash
-bash scripts/compare.sh watchlists/indices.txt
+bash scripts/watchlist.sh watchlists/indices.txt
 ```
 
 ## Output
@@ -118,7 +118,7 @@ There is no automated test suite or package manager. Run shell syntax checks bef
 
 ```bash
 bash -n scripts/stock.sh
-bash -n scripts/compare.sh
+bash -n scripts/watchlist.sh
 ```
 
 A network-backed smoke test for the calculator is:
@@ -136,7 +136,7 @@ The **Run index dashboard** workflow accepts an index alias from `watchlists/ind
 ## Files
 
 - `scripts/stock.sh` - single-symbol data download, calculations, trend classification, and report generation.
-- `scripts/compare.sh` - batch processing and colorized dashboard rendering.
+- `scripts/watchlist.sh` - batch processing and colorized dashboard rendering.
 - `watchlists/holdings.txt` - default stock watchlist.
 - `watchlists/indices.txt` - index/watchlist aliases.
 - `.github/copilot-instructions.md` - repository-specific guidance for Copilot sessions.
