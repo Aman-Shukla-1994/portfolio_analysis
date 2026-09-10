@@ -15,6 +15,7 @@ on:
           - globalIndices.txt
           - holdings.txt
           - ipo.txt
+          - etfs.txt
 
 permissions:
   contents: read
@@ -33,4 +34,4 @@ jobs:
           WATCHLIST: ${{ inputs.watchlist }}
         run: |
           set -o pipefail
-          bash scripts/compare.sh "watchlists/$WATCHLIST"
+          bash scripts/watchlist.sh "watchlists/$WATCHLIST"
