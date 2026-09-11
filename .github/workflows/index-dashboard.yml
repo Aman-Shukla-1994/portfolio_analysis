@@ -9,24 +9,23 @@ on:
         required: true
         type: choice
         options:
-          - auto
-          - banknifty
-          - commodities
-          - consumption
+          - niftyauto
+          - niftybank
+          - niftycommodities
+          - niftyconsumption
           - niftyenergy
-          - fmcg
-          - infra
-          - it
-          - media
+          - niftyfmcg
+          - niftyinfra
+          - niftyit
+          - niftymedia
           - niftymetal
-          - midcap150
-          - next50
-          - nifty
-          - pharma
-          - psubank
-          - realty
-          - sensex
-          - smlcap250
+          - niftymidcap150
+          - niftynext50
+          - nifty50
+          - niftypharma
+          - niftypsubank
+          - niftyrealty
+          - niftysmlcap250
 
 permissions:
   contents: read
