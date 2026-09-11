@@ -9,13 +9,12 @@ on:
         required: true
         type: choice
         options:
-          - indices.txt
-          - defence.txt
           - dividendStocks.txt
+          - etfs.txt
           - globalIndices.txt
           - holdings.txt
+          - indices.txt
           - ipo.txt
-          - etfs.txt
 
 permissions:
   contents: read
