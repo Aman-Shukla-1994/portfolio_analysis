@@ -15,6 +15,7 @@ on:
           - holdings.txt
           - indices.txt
           - ipo.txt
+          - myNewList.txt
       color_coding:
         description: Send an email with the generated CSV when enabled
         required: false

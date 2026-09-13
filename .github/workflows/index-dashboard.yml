@@ -45,10 +45,10 @@ jobs:
         run: |
           set -euo pipefail
           case "$INDEX_ALIAS" in
-            niftysmlcap250|smallcap250)
+            niftysmlcap250|smallcap250|niftysmallcap250)
               INDEX_ALIAS="niftysmallcap250"
               ;;
-            niftyindiaconsumption|indiaconsumption)
+            niftyindiaconsumption|indiaconsumption|niftyindiaconsumption)
               INDEX_ALIAS="niftyindiaconsumption"
               ;;
           esac
@@ -59,18 +59,27 @@ jobs:
           INDEX_ALIAS: ${{ inputs.index }}
         run: |
           set -o pipefail
+          case "$INDEX_ALIAS" in
+            niftysmlcap250|smallcap250|niftysmallcap250)
+              INDEX_ALIAS="niftysmallcap250"
+              ;;
+            niftyindiaconsumption|indiaconsumption|niftyindiaconsumption)
+              INDEX_ALIAS="niftyindiaconsumption"
+              ;;
+          esac
           bash scripts/index_dashboard.sh "$INDEX_ALIAS" "$GITHUB_WORKSPACE/index_dashboard.csv"
 
       - name: Upload index CSV artifact
-        if: always()
         uses: actions/upload-artifact@v4
+        env:
+          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
         with:
           name: index-${{ inputs.index }}-csv
           path: ${{ github.workspace }}/index_dashboard.csv
           if-no-files-found: error
 
-      - name: Send index email
-        if: ${{ env.SMTP_SERVER != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != '' && env.EMAIL_TO != '' }}
+      - name: Check SMTP auth prerequisites
+        if: ${{ env.SMTP_SERVER != '' || env.SMTP_USERNAME != '' || env.SMTP_PASSWORD != '' || env.EMAIL_TO != '' }}
         env:
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           SMTP_PORT: ${{ secrets.SMTP_PORT || 587 }}
@@ -78,7 +87,24 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM || secrets.SMTP_USERNAME }}
-        uses: dawidd6/action-send-mail@v3
+        run: |
+          set -euo pipefail
+          if [ -n "${SMTP_SERVER:-}" ] || [ -n "${SMTP_USERNAME:-}" ] || [ -n "${SMTP_PASSWORD:-}" ] || [ -n "${EMAIL_TO:-}" ]; then
+            if [ "${SMTP_SERVER:-}" = "smtp.gmail.com" ] || [ "${SMTP_SERVER:-}" = "smtp-relay.gmail.com" ]; then
+              echo "Gmail SMTP requires a Google App Password in SMTP_PASSWORD. SMTP_USERNAME must be the full Gmail address."
+            fi
+          fi
+
+      - name: Send index email
+        if: ${{ env.SMTP_SERVER != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != '' && env.EMAIL_TO != '' }}
+        env:
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || 587 }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME || secrets.EMAIL_FROM }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM || secrets.SMTP_USERNAME }}
+        uses: dawidd6/action-send-mail@v21
         with:
           server_address: ${{ env.SMTP_SERVER }}
           server_port: ${{ env.SMTP_PORT }}
