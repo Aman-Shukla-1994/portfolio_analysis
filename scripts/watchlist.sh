@@ -177,11 +177,9 @@ if [ -n "$OUTPUT_CSV" ]; then
             '' \
             'for row_index, row in enumerate(rows, start=1):' \
             '    for col_index, value in enumerate(row, start=1):' \
-            '        if row_index == 1:' \
-            '            continue' \
-            '        if col_index not in return_columns:' \
-            '            continue' \
             '        cell = ws.cell(row=row_index, column=col_index, value=value)' \
+            '        if row_index == 1 or col_index not in return_columns:' \
+            '            continue' \
             '        if not value:' \
             '            continue' \
             '        try:' \

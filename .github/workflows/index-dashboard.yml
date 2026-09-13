@@ -36,11 +36,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-      SMTP_PORT: ${{ secrets.SMTP_PORT || 587 }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
       SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
       SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
       EMAIL_TO: ${{ secrets.EMAIL_TO }}
-      EMAIL_FROM: ${{ secrets.EMAIL_FROM || secrets.SMTP_USERNAME }}
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
 
     steps:
       - name: Check out repository
@@ -70,14 +70,19 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Report missing email configuration
+        if: ${{ env.SMTP_SERVER == '' || env.SMTP_PORT == '' || env.SMTP_USERNAME == '' || env.SMTP_PASSWORD == '' || env.EMAIL_TO == '' || env.EMAIL_FROM == '' }}
+        run: |
+          echo "::warning::Email skipped. Configure repository secrets SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, EMAIL_TO, and EMAIL_FROM."
+
       - name: Send email
-        if: ${{ env.SMTP_SERVER != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != '' && env.EMAIL_TO != '' }}
+        if: ${{ env.SMTP_SERVER != '' && env.SMTP_PORT != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != '' && env.EMAIL_TO != '' && env.EMAIL_FROM != '' }}
         uses: dawidd6/action-send-mail@v21
         with:
           server_address: ${{ env.SMTP_SERVER }}
           server_port: ${{ env.SMTP_PORT }}
           secure: false
-          tls: true
+          require_tls: true
           username: ${{ env.SMTP_USERNAME }}
           password: ${{ env.SMTP_PASSWORD }}
           subject: "Index dashboard: ${{ inputs.index }}"

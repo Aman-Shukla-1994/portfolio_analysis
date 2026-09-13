@@ -83,6 +83,15 @@ bash scripts/watchlist.sh watchlists/indices.txt output/indices.csv
 bash scripts/index_dashboard.sh niftyauto output/niftyauto.csv
 ```
 
+To export an Excel workbook with green positive returns and red negative returns:
+
+```bash
+python3 -m pip install openpyxl
+bash scripts/watchlist.sh watchlists/indices.txt output/indices.xlsx
+```
+
+CSV files cannot store cell colors. The watchlist GitHub Actions workflow therefore uploads and emails the colored `.xlsx` workbook.
+
 ## Output
 
 For each symbol, `stock.sh` reports:
@@ -150,6 +159,17 @@ bash scripts/stock.sh NIFTY
 The **Run watchlist dashboard** workflow can be started manually from the Actions tab and exposes the current watchlists under `watchlists/`. The **Analyze stock symbols** workflow accepts a comma-separated string such as `RELIANCE, TCS, NIFTY` and runs the calculator for each symbol in order. Each workflow retrieves live market data and uploads its report as a workflow artifact.
 
 The **Run index dashboard** workflow accepts an index alias from `watchlists/indices.txt` and runs `scripts/index_dashboard.sh` for that index. The selectable aliases are maintained from the same watchlist and validated again during the workflow run.
+
+To enable workflow email delivery, add these values as GitHub Actions repository secrets:
+
+- `SMTP_SERVER`: SMTP host, for example `smtp.gmail.com`
+- `SMTP_PORT`: SMTP port, normally `587`
+- `SMTP_USERNAME`: full sender Gmail address
+- `SMTP_PASSWORD`: Gmail app password, not the normal account password
+- `EMAIL_TO`: recipient email address
+- `EMAIL_FROM`: sender email address, normally the same as `SMTP_USERNAME`
+
+The local `.env` file is ignored and is not uploaded to GitHub Actions. Configure the secrets in the repository's Settings under Secrets and variables > Actions.
 
 ## Files
 
