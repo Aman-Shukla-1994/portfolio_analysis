@@ -60,18 +60,26 @@ jobs:
         run: |
           set -Eeuo pipefail
           INDEX_ALIAS="${INDEX_ALIAS//[$'\r\n']/}"
+          INDEX_ALIAS="${INDEX_ALIAS//[[:space:]]/}"
           INDEX_ALIAS="${INDEX_ALIAS,,}"
 
           case "$INDEX_ALIAS" in
-            niftysmlcap250|smallcap250|niftysmallcap250)
+            niftysmlcap250|smallcap250|niftysmallcap250|nifty-sml-cap-250|nifty_sml_cap_250)
               INDEX_ALIAS="niftysmallcap250"
               ;;
-            niftyindiaconsumption|indiaconsumption|niftyindiaconsumption|nifty-india-consumption|nifty_india_consumption)
+            niftyindiaconsumption|indiaconsumption|niftyindia-consumption|niftyindia_consumption|nifty_india_consumption|nifty-india-consumption|niftyindiaconsumption|niftyindia-consumption)
               INDEX_ALIAS="niftyindiaconsumption"
+              ;;
+            *)
+              # Preserve the selected alias if it is already canonical.
               ;;
           esac
 
-          grep -Fxq "$INDEX_ALIAS" watchlists/indices.txt
+          if ! grep -Fxq "$INDEX_ALIAS" watchlists/indices.txt; then
+            echo "Unknown index alias: $INDEX_ALIAS"
+            exit 1
+          fi
+
           bash scripts/index_dashboard.sh "$INDEX_ALIAS" "$GITHUB_WORKSPACE/index_dashboard.csv"
 
       - name: Upload index CSV artifact
@@ -88,7 +96,7 @@ jobs:
         env:
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           SMTP_PORT: ${{ secrets.SMTP_PORT || 587 }}
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME || secrets.EMAIL_FROM }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM || secrets.SMTP_USERNAME }}
@@ -96,6 +104,17 @@ jobs:
           set -euo pipefail
           if [ -n "${SMTP_SERVER:-}" ] || [ -n "${SMTP_USERNAME:-}" ] || [ -n "${SMTP_PASSWORD:-}" ] || [ -n "${EMAIL_TO:-}" ]; then
             if [ "${SMTP_SERVER:-}" = "smtp.gmail.com" ] || [ "${SMTP_SERVER:-}" = "smtp-relay.gmail.com" ]; then
+              if [ -n "${SMTP_USERNAME:-}" ] && [[ "${SMTP_USERNAME}" != *"@"* ]]; then
+                echo "Gmail SMTP requires SMTP_USERNAME to be the full Gmail address, not a display name or alias."
+                echo "Also set SMTP_PASSWORD to the Gmail App Password (not your normal password)."
+                exit 1
+              fi
+
+              if [ -n "${EMAIL_FROM:-}" ] && [[ "${EMAIL_FROM}" != *"@"* ]]; then
+                echo "Gmail SMTP requires EMAIL_FROM to be a valid email address when provided."
+                exit 1
+              fi
+
               echo "Gmail SMTP requires a Google App Password in SMTP_PASSWORD. SMTP_USERNAME must be the full Gmail address."
             fi
           fi
@@ -117,7 +136,7 @@ jobs:
           password: ${{ env.SMTP_PASSWORD }}
           subject: "Index dashboard: ${{ inputs.index }}"
           to: ${{ env.EMAIL_TO }}
-          from: ${{ env.EMAIL_FROM }}
+          from: ${{ env.EMAIL_FROM || env.SMTP_USERNAME }}
           secure: false
           require_tls: true
           attachments: ${{ github.workspace }}/index_dashboard.csv
