@@ -2,10 +2,11 @@
 
 ## Project shape
 
-This repository is a shell-based portfolio and market-index analysis tool. It has two executable entry points:
+This repository is a shell-based portfolio and market-index analysis tool. It has three executable entry points:
 
 - `scripts/stock.sh SYMBOL` is the single-symbol calculator. Bash validates and normalizes the symbol, maps known Indian indices to Yahoo Finance tickers, downloads 10 years plus a recent 10-day window of daily chart data, and passes the temporary JSON files to an embedded Python 3 program.
 - `scripts/watchlist.sh holdings.txt` is the batch dashboard. It reads one symbol per line, invokes `stock.sh` for each symbol, extracts values from the calculator's human-readable output, sorts rows by action priority, and renders a colorized table.
+- `scripts/index_dashboard.sh INDEX_ALIAS` resolves a supported index alias, downloads its constituents, and passes the temporary symbol list to `watchlist.sh`.
 
 The data files are inputs rather than application code:
 

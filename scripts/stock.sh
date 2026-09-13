@@ -125,9 +125,6 @@ elif [ "$SYMBOL" = "MIDCAP150" ] || [ "$SYMBOL" = "NIFTY_MIDCAP_150" ] || [ "$SY
     YAHOO="NIFTYMIDCAP150.NS"
     SYMBOL="NIFTY_MIDCAP_150"
     NSE_INDEX="NIFTY MIDCAP 150"
-#elif [ "$SYMBOL" = "SMLCAP100" ] || [ "$SYMBOL" = "NIFTY_SMLCAP_100" ]; then
-#    YAHOO="%5ECNXSC"
-#    SYMBOL="NIFTY_SMALLCAP_100"
 elif [ "$SYMBOL" = "SMLCAP250" ] || [ "$SYMBOL" = "NIFTY_SMLCAP_250" ] || [ "$SYMBOL" = "NIFTYSMALLCAP250" ] || [ "$SYMBOL" = "SMALLCAP250" ] || [ "$SYMBOL" = "SMLCAP" ]; then
     YAHOO="NIFTYSMLCAP250.NS"
     SYMBOL="NIFTY_SMALLCAP_250"
@@ -838,7 +835,7 @@ INDEX_SECTOR_MAP = {
 import urllib.request
 import urllib.error
 
-# ── 1. TickerTape: stock-level PE, PB, DivYield, ROE (primary) ──
+# ── 1. TickerTape: stock-level PE, PB, and DivYield (primary) ──
 try:
     ticker = YAHOO.replace('.NS', '').replace('.BO', '')
     tt_search_url = f"https://api.tickertape.in/search?text={ticker}"
@@ -888,10 +885,6 @@ try:
         if dy_val is not None:
             fund_data["divYield"] = f"{dy_val:.2f}%"
 
-        roe_val = ratios.get("roe")
-        if roe_val is not None:
-            fund_data["roe"] = f"{roe_val:.2f}%"
-
 except Exception:
     # ── Fallback: Yahoo Finance ──
     try:
@@ -936,8 +929,6 @@ except Exception:
                 dy = res.get("summaryDetail", {}).get("dividendYield", {})
                 fund_data["divYield"] = dy.get("fmt", "N/A")
 
-                roe = res.get("financialData", {}).get("returnOnEquity", {})
-                fund_data["roe"] = roe.get("fmt", "N/A")
     except Exception:
         pass
 

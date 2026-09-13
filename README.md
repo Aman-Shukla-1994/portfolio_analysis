@@ -29,9 +29,10 @@ The symbol is normalized to uppercase. You may provide a single symbol, multiple
 - `niftybank`
 - `niftycommodities`
 - `niftyconsumption`
+- `niftyindiaconsumption`
 - `niftyenergy`
 - `niftyfmcg`
-- `niftyinfra`
+- `niftyinfrastructure`
 - `niftyit`
 - `niftymedia`
 - `niftymetal`
@@ -41,7 +42,6 @@ The symbol is normalized to uppercase. You may provide a single symbol, multiple
 - `niftypsubank`
 - `niftyrealty`
 - `niftysmallcap250`
-- `sensex`
 
 Older shorthand names such as `nifty`, `banknifty`, `metal`, and `smlcap250` remain accepted for compatibility, but the canonical repo convention is the `nifty...` prefix.
 
@@ -59,10 +59,10 @@ Available watchlists include:
 
 - `watchlists/holdings.txt`
 - `watchlists/indices.txt`
-- `watchlists/investlist.txt`
 - `watchlists/ipo.txt`
 - `watchlists/dividendStocks.txt`
-- `watchlists/globalndices.txt`
+- `watchlists/etfs.txt`
+- `watchlists/globalIndices.txt`
 
 To use another watchlist:
 
@@ -92,7 +92,6 @@ For each symbol, `stock.sh` reports:
 - Fundamental fields relevant to the active mode: sector, market-cap type, PE, PB, and dividend yield
 - Absolute return rows for 1W, 1M, 3M, 6M, YTD, 1Y, 3Y, and 5Y
 - The 52-week range block for the current symbol
-- Index mode distinguishes sector/index fundamentals from stock fundamentals without showing ROE
 - The console output intentionally omits tranche labels and market-cap values in the compact view
 
 The calculator downloads a 10-year daily history and overlays a recent 10-day download so the latest available sessions are refreshed. Data is converted to India Standard Time before trading dates are selected. For recognized NSE indices, the displayed 52-week high/low and the 1M/1Y change values use the official NSE `allIndices` feed; Yahoo Finance remains the source for the broader historical return series. Stock symbols and the SENSEX continue to use Yahoo high/low data.
@@ -137,6 +136,7 @@ There is no automated test suite or package manager. Run shell syntax checks bef
 ```bash
 bash -n scripts/stock.sh
 bash -n scripts/watchlist.sh
+bash -n scripts/index_dashboard.sh
 ```
 
 A network-backed smoke test for the calculator is:
@@ -155,8 +155,10 @@ The **Run index dashboard** workflow accepts an index alias from `watchlists/ind
 
 - `scripts/stock.sh` - single-symbol data download, calculations, trend classification, and report generation.
 - `scripts/watchlist.sh` - batch processing and colorized dashboard rendering.
+- `scripts/index_dashboard.sh` - resolves index aliases and downloads index constituents for the batch dashboard.
 - `watchlists/holdings.txt` - default stock watchlist.
 - `watchlists/indices.txt` - index/watchlist aliases.
+- `watchlists/dividendStocks.txt`, `watchlists/etfs.txt`, `watchlists/globalIndices.txt`, and `watchlists/ipo.txt` - additional selectable watchlists.
 - `.github/copilot-instructions.md` - repository-specific guidance for Copilot sessions.
 
 The dashboard uses temporary files for intermediate output and does not create generated files in the repository.
