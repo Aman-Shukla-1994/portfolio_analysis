@@ -34,6 +34,13 @@ jobs:
   analyze:
     name: Analyze ${{ inputs.index }} index
     runs-on: ubuntu-latest
+    env:
+      SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT || 587 }}
+      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      EMAIL_FROM: ${{ secrets.EMAIL_FROM || secrets.SMTP_USERNAME }}
 
     steps:
       - name: Check out repository
@@ -63,47 +70,19 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      # - name: Check SMTP auth prerequisites
-      #   if: ${{ env.SMTP_SERVER != '' || env.SMTP_USERNAME != '' || env.SMTP_PASSWORD != '' || env.EMAIL_TO != '' }}
-      #   env:
-      #     SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-      #     SMTP_PORT: ${{ secrets.SMTP_PORT || 587 }}
-      #     SMTP_USERNAME: ${{ secrets.SMTP_USERNAME || secrets.EMAIL_FROM }}
-      #     SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-      #     EMAIL_TO: ${{ secrets.EMAIL_TO }}
-      #     EMAIL_FROM: ${{ secrets.EMAIL_FROM || secrets.SMTP_USERNAME }}
-      #   run: |
-      #     set -euo pipefail
-      #     if [ -n "${SMTP_SERVER:-}" ] || [ -n "${SMTP_USERNAME:-}" ] || [ -n "${SMTP_PASSWORD:-}" ] || [ -n "${EMAIL_TO:-}" ]; then
-      #       if [ "${SMTP_SERVER:-}" = "smtp.gmail.com" ] || [ "${SMTP_SERVER:-}" = "smtp-relay.gmail.com" ]; then
-      #         if [ -n "${SMTP_USERNAME:-}" ] && [[ "${SMTP_USERNAME}" != *"@"* ]]; then
-      #           echo "Gmail SMTP requires SMTP_USERNAME to be the full Gmail address, not a display name or alias."
-      #           echo "Also set SMTP_PASSWORD to the Gmail App Password (not your normal password)."
-      #           exit 1
-      #         fi
-
-      #         if [ -n "${EMAIL_FROM:-}" ] && [[ "${EMAIL_FROM}" != *"@"* ]]; then
-      #           echo "Gmail SMTP requires EMAIL_FROM to be a valid email address when provided."
-      #           exit 1
-      #         fi
-
-      #         echo "Gmail SMTP requires a Google App Password in SMTP_PASSWORD. SMTP_USERNAME must be the full Gmail address."
-      #       fi
-      #     fi
-
-      - name: Send ${{ inputs.index }} email
+      - name: Send email
+        if: ${{ env.SMTP_SERVER != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != '' && env.EMAIL_TO != '' }}
         uses: dawidd6/action-send-mail@v21
         with:
-          connection_url: smtp://${{ secrets.SMTP_USERNAME }}:${{ secrets.SMTP_PASSWORD }}@${{ secrets.SMTP_SERVER }}:${{ secrets.SMTP_PORT || 587 }}
-          server_address: ${{ secrets.SMTP_ADDRESS }}
-          server_port: ${{ secrets.SMTP_PORT }}
+          server_address: ${{ env.SMTP_SERVER }}
+          server_port: ${{ env.SMTP_PORT }}
           secure: false
-          require_tls: true
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
+          tls: true
+          username: ${{ env.SMTP_USERNAME }}
+          password: ${{ env.SMTP_PASSWORD }}
           subject: "Index dashboard: ${{ inputs.index }}"
-          to: ${{ secrets.SMTP_USERNAME }}
-          from: ${{ secrets.SMTP_USERNAME }}
+          to: ${{ env.EMAIL_TO }}
+          from: ${{ env.EMAIL_FROM }}
           attachments: ${{ github.workspace }}/${{ inputs.index }}_dashboard.csv
           body: |
             Index: ${{ inputs.index }}

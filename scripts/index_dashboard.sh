@@ -33,6 +33,7 @@ declare -A INDEX_ALIASES=(
     [banknifty]="niftybank"
     [niftycommodities]="niftycommodities"
     [commodities]="niftycommodities"
+    [niftyconsumption]="niftyindiaconsumption"
     [niftyindiaconsumption]="niftyindiaconsumption"
     [indiaconsumption]="niftyindiaconsumption"
     [niftyenergy]="niftyenergy"

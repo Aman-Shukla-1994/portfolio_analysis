@@ -2,6 +2,7 @@ nifty50
 niftyauto
 niftybank
 niftycommodities
+niftyconsumption
 niftyindiaconsumption
 niftyenergy
 niftyfmcg

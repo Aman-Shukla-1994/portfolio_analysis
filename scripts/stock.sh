@@ -802,49 +802,11 @@ from_high = return_pct(
 # FETCH FUNDAMENTALS
 # ============================================================
 
-def compute_peg_from_summary(pe_value, profit_rows):
-    try:
-        pe = float(pe_value)
-    except (TypeError, ValueError):
-        return None
-
-    if pe <= 0:
-        return None
-
-    profits = []
-    for row in profit_rows or []:
-        try:
-            profit = float(row.get("profit"))
-        except (TypeError, ValueError):
-            continue
-        if profit is not None:
-            profits.append(profit)
-
-    if len(profits) < 2:
-        return None
-
-    first_profit = profits[0]
-    last_profit = profits[-1]
-    if first_profit <= 0 or last_profit <= 0:
-        return None
-
-    periods = len(profits) - 1
-    if periods <= 0:
-        return None
-
-    cagr = (last_profit / first_profit) ** (1.0 / periods) - 1.0
-    if cagr <= 0:
-        return None
-
-    return pe / (cagr * 100.0)
-
-
 fund_data = {
     "sector": "N/A",
     "marketCap": "N/A",
     "marketCapType": "N/A",
     "peRatio": "N/A",
-    "pegRatio": "N/A",
     "pbRatio": "N/A",
     "divYield": "N/A"
 }
@@ -918,28 +880,6 @@ try:
         if pe_val:
             fund_data["peRatio"] = f"{pe_val:.2f}"
 
-        summary_url = f"https://api.tickertape.in/stocks/summary/{sid}"
-        req_summary = urllib.request.Request(summary_url, headers={'User-Agent': 'Mozilla/5.0'})
-        resp_summary = urllib.request.urlopen(req_summary, timeout=5)
-        summary_data = json.loads(resp_summary.read().decode('utf-8'))
-        profit_rows = summary_data.get("data", {}).get("financialSummary", {}).get("fiscalYearToData", [])
-        calc_peg = compute_peg_from_summary(fund_data["peRatio"], profit_rows)
-        if calc_peg is not None:
-            fund_data["pegRatio"] = f"{calc_peg:.2f}"
-
-        peg_val = ratios.get("peg")
-        if peg_val is None:
-            peg_val = ratios.get("pegRatio")
-        if peg_val is None:
-            peg_val = ratios.get("trailingPegRatio")
-        if peg_val is None:
-            peg_val = ratios.get("ttmPeg")
-        if peg_val not in (None, "") and fund_data["pegRatio"] == "N/A":
-            try:
-                fund_data["pegRatio"] = f"{float(peg_val):.2f}"
-            except (TypeError, ValueError):
-                pass
-
         pb_val = ratios.get("pb")
         if pb_val:
             fund_data["pbRatio"] = f"{pb_val:.2f}"
@@ -989,14 +929,6 @@ except Exception:
 
                 pe = res.get("summaryDetail", {}).get("trailingPE", {})
                 fund_data["peRatio"] = pe.get("fmt", "N/A")
-
-                peg = res.get("defaultKeyStatistics", {}).get("pegRatio", {})
-                peg_value = peg.get("fmt") or peg.get("raw")
-                if peg_value not in (None, ""):
-                    try:
-                        fund_data["pegRatio"] = f"{float(peg_value):.2f}"
-                    except (TypeError, ValueError):
-                        pass
 
                 pb = res.get("defaultKeyStatistics", {}).get("priceToBook", {})
                 fund_data["pbRatio"] = pb.get("fmt", "N/A")
@@ -1078,7 +1010,6 @@ print(f"Mode            : {'INDEX' if nse_index else 'STOCK'}")
 print(f"Sector          : {fund_data['sector']}")
 print(f"MarketType      : {fund_data['marketCapType']}")
 print(f"PE              : {fund_data['peRatio']}")
-print(f"PEG             : {fund_data['pegRatio']}")
 print(f"PB              : {fund_data['pbRatio']}")
 print(f"DivYield        : {fund_data['divYield']}")
 print()
