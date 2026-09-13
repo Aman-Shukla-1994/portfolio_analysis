@@ -58,15 +58,20 @@ jobs:
         env:
           INDEX_ALIAS: ${{ inputs.index }}
         run: |
-          set -o pipefail
+          set -Eeuo pipefail
+          INDEX_ALIAS="${INDEX_ALIAS//[$'\r\n']/}"
+          INDEX_ALIAS="${INDEX_ALIAS,,}"
+
           case "$INDEX_ALIAS" in
             niftysmlcap250|smallcap250|niftysmallcap250)
               INDEX_ALIAS="niftysmallcap250"
               ;;
-            niftyindiaconsumption|indiaconsumption|niftyindiaconsumption)
+            niftyindiaconsumption|indiaconsumption|niftyindiaconsumption|nifty-india-consumption|nifty_india_consumption)
               INDEX_ALIAS="niftyindiaconsumption"
               ;;
           esac
+
+          grep -Fxq "$INDEX_ALIAS" watchlists/indices.txt
           bash scripts/index_dashboard.sh "$INDEX_ALIAS" "$GITHUB_WORKSPACE/index_dashboard.csv"
 
       - name: Upload index CSV artifact
@@ -114,7 +119,7 @@ jobs:
           to: ${{ env.EMAIL_TO }}
           from: ${{ env.EMAIL_FROM }}
           secure: false
-          tls: true
+          require_tls: true
           attachments: ${{ github.workspace }}/index_dashboard.csv
           body: |
             Index: ${{ inputs.index }}
