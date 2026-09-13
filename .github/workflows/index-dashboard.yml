@@ -1,5 +1,5 @@
 name: Analyse index
-run-name: Analyze index ${{ inputs.index }}
+run-name: Analyze index ${{ inputs.all_indices == true && 'ALLINDICES' || inputs.index }}
 
 on:
   workflow_dispatch:
