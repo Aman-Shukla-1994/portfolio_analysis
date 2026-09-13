@@ -16,6 +16,11 @@ on:
           - indices
           - ipo
           - myNewList
+      send_email:
+        description: Whether to send an email with the watchlist dashboard XLSX attached
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -46,7 +51,7 @@ jobs:
           set -o pipefail
           bash scripts/watchlist.sh "watchlists/$WATCHLIST" "$GITHUB_WORKSPACE/${{ inputs.watchlist }}.xlsx"
 
-      - name: Upload watchlist XLSX artifact
+      - name: Upload ${{ inputs.watchlist }} XLSX artifact
         if: always()
         uses: actions/upload-artifact@v7
         with:

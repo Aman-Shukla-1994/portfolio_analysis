@@ -29,7 +29,6 @@ The symbol is normalized to uppercase. You may provide a single symbol, multiple
 - `niftybank`
 - `niftycommodities`
 - `niftyconsumption`
-- `niftyindiaconsumption`
 - `niftyenergy`
 - `niftyfmcg`
 - `niftyinfrastructure`
