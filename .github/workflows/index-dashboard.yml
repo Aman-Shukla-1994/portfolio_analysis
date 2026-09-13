@@ -79,10 +79,25 @@ jobs:
         if: ${{ inputs.all_indices == true }}
         run: |
           set -Eeuo pipefail
+          pids=()
           while IFS= read -r index_alias; do
             [ -z "$index_alias" ] && continue
-            bash scripts/index_dashboard.sh "$index_alias" "$GITHUB_WORKSPACE/${index_alias}_dashboard.xlsx"
+            echo "Starting ${index_alias} dashboard"
+            bash scripts/index_dashboard.sh "$index_alias" "$GITHUB_WORKSPACE/${index_alias}_dashboard.xlsx" &
+            pids+=("$!")
           done < watchlists/indices
+
+          failed=0
+          for pid in "${pids[@]}"; do
+            if ! wait "$pid"; then
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "One or more index dashboards failed."
+            exit 1
+          fi
 
       - name: Prepare dashboard email attachments
         run: |
