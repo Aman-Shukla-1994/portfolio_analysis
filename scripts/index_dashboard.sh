@@ -2,15 +2,16 @@
 
 set -u
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <index-alias>"
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+    echo "Usage: $0 <index-alias> [output-file]"
     echo "Example: $0 auto"
+    echo "Example: $0 niftyauto output.xlsx"
     exit 1
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-INDEX_FILE="$REPO_ROOT/watchlists/indices.txt"
+INDEX_FILE="$REPO_ROOT/watchlists/indices"
 INDEX_INPUT="$1"
 INDEX_ALIAS="$(echo "$INDEX_INPUT" | tr '[:upper:]' '[:lower:]')"
 TMP_INDEX_FILE="$(mktemp)"
@@ -33,13 +34,14 @@ declare -A INDEX_ALIASES=(
     [niftycommodities]="niftycommodities"
     [commodities]="niftycommodities"
     [niftyconsumption]="niftyconsumption"
-    [consumption]="niftyconsumption"
+    [niftyindiaconsumption]="niftyconsumption"
+    [indiaconsumption]="niftyconsumption"
     [niftyenergy]="niftyenergy"
     [energy]="niftyenergy"
     [niftyfmcg]="niftyfmcg"
     [fmcg]="niftyfmcg"
-    [niftyinfra]="niftyinfra"
-    [infra]="niftyinfra"
+    [niftyinfrastructure]="niftyinfrastructure"
+    [infra]="niftyinfrastructure"
     [niftyit]="niftyit"
     [it]="niftyit"
     [niftymedia]="niftymedia"
@@ -70,7 +72,7 @@ declare -A INDEX_CSV_NAMES=(
     [niftyconsumption]="niftyconsumptionlist"
     [niftyenergy]="niftyenergylist"
     [niftyfmcg]="niftyfmcglist"
-    [niftyinfra]="niftyinfralist"
+    [niftyinfrastructure]="niftyinfralist"
     [niftyit]="niftyitlist"
     [niftymedia]="niftymedialist"
     [niftymetal]="niftymetallist"
@@ -88,15 +90,19 @@ fi
 
 if ! grep -Eq "^${INDEX_ALIAS}$" "$INDEX_FILE" 2>/dev/null; then
     echo "Unsupported index alias: $INDEX_INPUT"
-    echo "Supported aliases from watchlists/indices.txt:"
+    echo "Supported aliases from watchlists/indices:"
     cat "$INDEX_FILE" 2>/dev/null || echo "(watchlist not found)"
     exit 1
 fi
 
 # Try to use a dedicated watchlist file if one already exists for this alias.
-if [ -f "$REPO_ROOT/watchlists/${INDEX_ALIAS}.txt" ]; then
-    cp "$REPO_ROOT/watchlists/${INDEX_ALIAS}.txt" "$TMP_INDEX_FILE"
-    bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"
+if [ -f "$REPO_ROOT/watchlists/${INDEX_ALIAS}" ]; then
+    cp "$REPO_ROOT/watchlists/${INDEX_ALIAS}" "$TMP_INDEX_FILE"
+    if [ $# -eq 2 ]; then
+        bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE" "$2"
+    else
+        bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"
+    fi
     exit 0
 fi
 
@@ -138,4 +144,8 @@ if [ ! -s "$TMP_INDEX_FILE" ]; then
     exit 1
 fi
 
-bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"
+if [ $# -eq 2 ]; then
+    bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE" "$2"
+else
+    bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"
+fi
