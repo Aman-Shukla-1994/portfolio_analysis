@@ -76,21 +76,26 @@ To get the 52-week low and high for every configured index:
 bash scripts/watchlist.sh watchlists/indices.txt
 ```
 
+To export the same compact table as CSV:
+
+```bash
+bash scripts/watchlist.sh watchlists/indices.txt output/indices.csv
+bash scripts/index_dashboard.sh niftyauto output/niftyauto.csv
+```
+
 ## Output
 
 For each symbol, `stock.sh` reports:
 
 - The latest completed trading-day close
 - The percentage distance of the current close above the 52-week low and below the 52-week high
-- 1-week and 2-week momentum returns
-- 1-month, 3-month, 4.5-month, 6-month, 9-month, and YTD returns
-- 1-year, 3-year, 5-year, 7.5-year, 10-year, and 15-year returns
-- Short-, medium-, and long-term trend classifications
-- An overall action such as `BUY - BREAKOUT ABOVE R1`, `ACCUMULATE - UPTREND`, or `WAIT - DOWNTREND`
-- The 52-week tranche levels: `L`, `T1`, `M`, `T2`, `H`
-- The current tranche and pivot levels (`Pivot Point`, `R1`, `S1`, `R2`, `S2`)
+- Fundamental fields relevant to the active mode: sector, market-cap type, PE, PB, and dividend yield
+- Absolute return rows for 1W, 1M, 3M, 6M, YTD, 1Y, 3Y, and 5Y
+- The 52-week range block for the current symbol
+- Index mode distinguishes sector/index fundamentals from stock fundamentals without showing ROE
+- The console output intentionally omits tranche labels and market-cap values in the compact view
 
-The calculator downloads a 10-year daily history and overlays a recent 10-day download so the latest available sessions are refreshed. Data is converted to India Standard Time before trading dates are selected. For recognized NSE indices, the displayed 52-week high and low use the official NSE `allIndices` range; Yahoo Finance remains the source for the historical return calculations. Stock symbols and the SENSEX continue to use Yahoo high/low data.
+The calculator downloads a 10-year daily history and overlays a recent 10-day download so the latest available sessions are refreshed. Data is converted to India Standard Time before trading dates are selected. For recognized NSE indices, the displayed 52-week high/low and the 1M/1Y change values use the official NSE `allIndices` feed; Yahoo Finance remains the source for the broader historical return series. Stock symbols and the SENSEX continue to use Yahoo high/low data.
 
 ## Tranche calculation
 

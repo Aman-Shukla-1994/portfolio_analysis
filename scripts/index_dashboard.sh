@@ -2,9 +2,10 @@
 
 set -u
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <index-alias>"
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+    echo "Usage: $0 <index-alias> [output.csv]"
     echo "Example: $0 auto"
+    echo "Example: $0 niftyauto output.csv"
     exit 1
 fi
 
@@ -96,7 +97,11 @@ fi
 # Try to use a dedicated watchlist file if one already exists for this alias.
 if [ -f "$REPO_ROOT/watchlists/${INDEX_ALIAS}.txt" ]; then
     cp "$REPO_ROOT/watchlists/${INDEX_ALIAS}.txt" "$TMP_INDEX_FILE"
-    bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"
+    if [ $# -eq 2 ]; then
+        bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE" "$2"
+    else
+        bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"
+    fi
     exit 0
 fi
 
@@ -138,4 +143,8 @@ if [ ! -s "$TMP_INDEX_FILE" ]; then
     exit 1
 fi
 
-bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"
+if [ $# -eq 2 ]; then
+    bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE" "$2"
+else
+    bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"
+fi

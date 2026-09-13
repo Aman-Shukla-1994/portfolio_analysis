@@ -29,166 +29,185 @@ resolve_watchlist() {
 }
 
 WATCHLIST="$(resolve_watchlist "$1")"
+OUTPUT_CSV="${2:-}"
 if [ -z "$WATCHLIST" ]; then
-    echo "Usage: $0 <filename>"
+    echo "Usage: $0 <filename> [output.csv]"
     exit 1
 fi
 
-# Define ANSI Color Codes
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[0;33m'
-NC='\033[0m' # No Color (Resets text)
-
-# Create a temporary workspace file for sorting
-TMP_DASH=$(mktemp)
 TMP_OUTPUT=$(mktemp)
-trap 'rm -f "$TMP_DASH" "$TMP_OUTPUT"' EXIT
+TMP_CSV=$(mktemp)
+TMP_PY=$(mktemp)
+trap 'rm -f "$TMP_OUTPUT" "$TMP_CSV" "$TMP_PY"' EXIT
 
-# Print a structured header row with clean alignment spacing
-printf "%-15s %-25s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s\n" \
-    "SYMBOL" "ACTION" "52W-H" "1W" "1M" "3M" "6M" "YTD" "1Y" "5Y" "R1" "S1" "R2" "S2"
-echo "-----------------------------------------------------------------------------------------------------------------------------------"
+if [ -n "$OUTPUT_CSV" ]; then
+    mkdir -p "$(dirname "$OUTPUT_CSV")" 2>/dev/null || true
+    printf '%s\n' 'SYMBOL,LTP,Sector,MarketType,PE,PEG,PB,DivYield,1W,1M,3M,6M,YTD,1Y,3Y,5Y,52WH,%-chg,52WHDate' > "$TMP_CSV"
+fi
 
-# Function to add color tokens to text based on indicators
-get_color_token() {
-    local val="$1"
-    if [[ "$val" == +* ]]; then
-        echo "G"
-    elif [[ "$val" == -* ]]; then
-        echo "R"
+colorize_return() {
+    local value="${1:-}"
+    if [ -z "$value" ] || [ "$value" = "N/A" ]; then
+        printf '%s' "$value"
+        return
+    fi
+    if [[ "$value" == -* || "$value" == \+* ]]; then
+        case "$value" in
+            -*) printf '\033[41m%s\033[0m' "$value" ;;
+            +*) printf '\033[42m%s\033[0m' "$value" ;;
+            *) printf '%s' "$value" ;;
+        esac
+    elif [[ "$value" == *% ]]; then
+        if [[ "$value" == -* ]]; then
+            printf '\033[41m%s\033[0m' "$value"
+        else
+            printf '\033[42m%s\033[0m' "$value"
+        fi
     else
-        echo "N"
+        printf '%s' "$value"
     fi
 }
 
+printf '%-12s %-8s %-18s %-15s %-8s %-8s %-8s %-18s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n' \
+    "SYMBOL" "LTP" "Sector" "MarketType" "PE" "PEG" "PB" "DivYield" "1W" "1M" "3M" "6M" "YTD" "1Y" "3Y" "5Y" "52WH" "%-chg" "52WHDate"
+echo "-----------------------------------------------------------------------------------------------------------------------------------"
+
 while IFS= read -r raw_line || [ -n "$raw_line" ]; do
-    # Strip carriage returns to fix Windows formatting bugs
     line=$(echo "$raw_line" | tr -d '\r')
-    
     if [ -z "$line" ]; then
         continue
     fi
 
-    # Run script and retain the exit status so failed symbols remain visible.
-    bash "$SCRIPT_DIR/stock.sh" "$line" > "$TMP_OUTPUT" 2>&1
-    tranche_status=$?
+    bash "$SCRIPT_DIR/stock.sh" "$line" > "$TMP_OUTPUT" 2>&1 || true
 
-    # Pull the percentage distance from the 52-week range.
-    lo52=$(grep "From 52W Low" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
-    hi52=$(grep "From 52W High" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    symbol="$line"
+    ltp=$(grep '^LTP[[:space:]]*:[[:space:]]*Rs\.' "$TMP_OUTPUT" | head -n 1 | sed -E 's/.*Rs\. ([0-9,]+(\.[0-9]+)?).*/\1/' | tr -d ',')
+    sector=$(grep '^Sector[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^Sector[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    market_cap_type=$(grep '^MarketType[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^MarketType[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    pe=$(grep '^PE[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^PE[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    peg=$(grep '^PEG[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^PEG[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    pb=$(grep '^PB[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^PB[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    div_yield=$(grep '^DivYield[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^DivYield[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    w1=$(grep '^1W Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^1W Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    m1=$(grep '^1M Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^1M Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    m3=$(grep '^3M Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^3M Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    m6=$(grep '^6M Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^6M Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    ytd=$(grep '^YTD Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^YTD Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    y1=$(grep '^1Y Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^1Y Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    y3=$(grep '^3Y Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^3Y Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    y5=$(grep '^5Y Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^5Y Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    high=$(grep '^52WH[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^52WH[[:space:]]*:[[:space:]]*Rs\. ([0-9,]+(\.[0-9]+)?).*/\1/' | tr -d ',')
+    from_high=$(grep '^52WH %-chg[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^52WH %-chg[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    high_date=$(grep '^52WH Date[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^52WH Date[[:space:]]*:[[:space:]]*(.*)$/\1/')
 
-    ac=$(grep "ACTION" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
-    w1=$(grep "^1W Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
-    m1=$(grep "^1M Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
-    m3=$(grep "^3M Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
-    m6=$(grep "^6M Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
-    yt=$(grep "^YTD Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
-    y1=$(grep "^1Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
-    y5=$(grep "^5Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
-    r1=$(grep "^R1" "$TMP_OUTPUT" | sed -E 's/.*Rs\. ([0-9]+\.[0-9]+).*/\1/' | xargs)
-    s1=$(grep "^S1" "$TMP_OUTPUT" | sed -E 's/.*Rs\. ([0-9]+\.[0-9]+).*/\1/' | xargs)
-    r2=$(grep "^R2" "$TMP_OUTPUT" | sed -E 's/.*Rs\. ([0-9]+\.[0-9]+).*/\1/' | xargs)
-    s2=$(grep "^S2" "$TMP_OUTPUT" | sed -E 's/.*Rs\. ([0-9]+\.[0-9]+).*/\1/' | xargs)
-    hi52=$(grep "From 52W High" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    : "${ltp:=N/A}"
+    : "${sector:=N/A}"
+    : "${market_cap_type:=N/A}"
+    : "${pe:=N/A}"
+    : "${peg:=N/A}"
+    : "${pb:=N/A}"
+    : "${div_yield:=N/A}"
+    : "${w1:=N/A}"
+    : "${m1:=N/A}"
+    : "${m3:=N/A}"
+    : "${m6:=N/A}"
+    : "${ytd:=N/A}"
+    : "${y1:=N/A}"
+    : "${y3:=N/A}"
+    : "${y5:=N/A}"
+    : "${high:=N/A}"
+    : "${from_high:=N/A}"
+    : "${high_date:=N/A}"
 
-    # Backward compatibility with older fields if needed
-    y3=$(grep "^3Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
-    y10=$(grep "^10Y Return" "$TMP_OUTPUT" | cut -d : -f2 | xargs)
+    printf '%-12s %-8s %-18s %-15s %-8s %-8s %-8s %-18s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n' \
+        "$symbol" "$ltp" "$sector" "$market_cap_type" "$pe" "$peg" "$pb" "$div_yield" "$(colorize_return "$w1")" "$(colorize_return "$m1")" "$(colorize_return "$m3")" "$(colorize_return "$m6")" "$(colorize_return "$ytd")" "$(colorize_return "$y1")" "$(colorize_return "$y3")" "$(colorize_return "$y5")" "$(colorize_return "$high")" "$(colorize_return "$from_high")" "$(colorize_return "$high_date")"
 
-    if [ -n "$ac" ]; then
-        # Determine Color Token for Action Status Column
-        if [[ "$ac" == *"BUY"* ]] || [[ "$ac" == *"ACCUMULATE"* ]]; then
-            col_tok="G"
-        elif [[ "$ac" == *"SELL"* ]] || [[ "$ac" == *"WAIT"* ]] || [[ "$ac" == *"CAUTION"* ]]; then
-            col_tok="R"
-        else
-            col_tok="Y"
-        fi
-
-        # Get color tokens for percentages
-        t_hi52=$(get_color_token "$hi52")
-        t_w1=$(get_color_token "$w1")
-        t_m1=$(get_color_token "$m1")
-        t_m3=$(get_color_token "$m3")
-        t_m6=$(get_color_token "$m6")
-        t_yt=$(get_color_token "$yt")
-        t_y1=$(get_color_token "$y1")
-        t_y5=$(get_color_token "$y5")
-        t_r1=$(get_color_token "$r1")
-        t_s1=$(get_color_token "$s1")
-        t_r2=$(get_color_token "$r2")
-        t_s2=$(get_color_token "$s2")
-        t_y3=$(get_color_token "$y3")
-        t_y10=$(get_color_token "$y10")
-
-        # =========================================================================
-        # REVISED ACTION SORTING PRIORITY LIST
-        # =========================================================================
-        if [[ "$ac" == "BUY - BREAKOUT ABOVE R1" ]]; then
-            rank="A"
-        elif [[ "$ac" == "ACCUMULATE - UPTREND" ]]; then
-            rank="B"
-        elif [[ "$ac" == "CAUTIOUS ACCUMULATION" ]]; then
-            rank="C"
-        elif [[ "$ac" == "CAUTION - BEARISH BIAS" ]]; then
-            rank="D"
-        elif [[ "$ac" == "MIXED - WAIT" ]]; then
-            rank="E"
-        elif [[ "$ac" == "WAIT - DOWNTREND" ]]; then
-            rank="F"
-        elif [[ "$ac" == "WAIT - STRONG DOWNTREND" ]]; then
-            rank="G"
-        elif [[ "$ac" == "SELL - BREAKDOWN BELOW S1" ]]; then
-            rank="H"
-        else
-            # Fallback for unexpected labels
-            rank="I"
-        fi
-
-        # Save raw values alongside color map blueprints to temporary file
-        echo "$rank|$line|$ac|$col_tok|$hi52|$t_hi52|$w1|$t_w1|$m1|$t_m1|$m3|$t_m3|$m6|$t_m6|$yt|$t_yt|$y1|$t_y1|$y5|$t_y5|$r1|$t_r1|$s1|$t_s1|$r2|$t_r2|$s2|$t_s2" >> "$TMP_DASH"
-    elif [ "$tranche_status" -ne 0 ]; then
-        # Do not silently discard symbols whose market data could not be read.
-        echo "G|$line|ERROR|Y|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N|N/A|N" >> "$TMP_DASH"
+    if [ -n "$OUTPUT_CSV" ]; then
+        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+            "$symbol" \
+            "$ltp" \
+            "$sector" \
+            "$market_cap_type" \
+            "$pe" \
+            "$peg" \
+            "$pb" \
+            "$div_yield" \
+            "$w1" \
+            "$m1" \
+            "$m3" \
+            "$m6" \
+            "$ytd" \
+            "$y1" \
+            "$y3" \
+            "$y5" \
+            "$high" \
+            "$from_high" \
+            "$high_date" >> "$TMP_CSV"
     fi
-    
 done < "$WATCHLIST"
 
-# Helper to map a single token back to full ANSI code wrapper text
-apply_color() {
-    local text="$1"
-    local tok="$2"
-    if [ "$tok" = "G" ]; then echo -ne "${GREEN}${text}${NC}";
-    elif [ "$tok" = "R" ]; then echo -ne "${RED}${text}${NC}";
-    elif [ "$tok" = "Y" ]; then echo -ne "${YELLOW}${text}${NC}";
-    else echo -ne "$text"; fi
-}
-
-# Read, sort by priority rank field (A -> B -> C -> D -> E -> F), and print
-sort -t'|' -k1,1 "$TMP_DASH" | while IFS='|' read -r r symbol action c_tok hi52 t_hi52 w1 t_w1 m1 t_m1 m3 t_m3 m6 t_m6 yt t_yt y1 t_y1 y5 t_y5 r1 t_r1 s1 t_s1 r2 t_r2 s2 t_s2; do
-    # Print out the base symbols
-    printf "%-15s " "$symbol"
-    
-    # Render Action block inside its own colored wrapper zone
-    if [ "$c_tok" = "G" ]; then echo -ne "${GREEN}"; elif [ "$c_tok" = "R" ]; then echo -ne "${RED}"; else echo -ne "${YELLOW}"; fi
-    printf "%-25s${NC} " "$action"
-
-    # Down from the 52-week high
-    apply_color "$(printf "%-8s" "$hi52")" "$t_hi52"; echo -n " "
-
-    # Render remaining selected metric columns individually
-    apply_color "$(printf "%-8s" "$w1")" "$t_w1"; echo -n " "
-    apply_color "$(printf "%-8s" "$m1")" "$t_m1"; echo -n " "
-    apply_color "$(printf "%-8s" "$m3")" "$t_m3"; echo -n " "
-    apply_color "$(printf "%-8s" "$m6")" "$t_m6"; echo -n " "
-    apply_color "$(printf "%-8s" "$yt")" "$t_yt"; echo -n " "
-    apply_color "$(printf "%-8s" "$y1")" "$t_y1"; echo -n " "
-    apply_color "$(printf "%-8s" "$y5")" "$t_y5"; echo -n " "
-    apply_color "$(printf "%-8s" "$r1")" "$t_r1"; echo -n " "
-    apply_color "$(printf "%-8s" "$s1")" "$t_s1"; echo -n " "
-    apply_color "$(printf "%-8s" "$r2")" "$t_r2"; echo -n " "
-    apply_color "$(printf "%-8s" "$s2")" "$t_s2"; echo ""
-done
-
-rm -f "$TMP_DASH"
+if [ -n "$OUTPUT_CSV" ]; then
+    if [[ "$OUTPUT_CSV" == *.xlsx || "$OUTPUT_CSV" == *.XLSX ]]; then
+        printf '%s\n' \
+            'import csv' \
+            'import sys' \
+            '' \
+            'try:' \
+            '    from openpyxl import Workbook' \
+            '    from openpyxl.styles import PatternFill' \
+            'except ImportError as exc:' \
+            '    print(f"ERROR: openpyxl is required for XLSX export: {exc}", file=sys.stderr)' \
+            '    sys.exit(1)' \
+            '' \
+            'input_csv, output_xlsx = sys.argv[1:3]' \
+            'red_fill = PatternFill(fill_type="solid", fgColor="FFB3B3")' \
+            'green_fill = PatternFill(fill_type="solid", fgColor="B8F2B8")' \
+            'wb = Workbook()' \
+            'ws = wb.active' \
+            'ws.title = "Watchlist"' \
+            '' \
+            'with open(input_csv, newline="", encoding="utf-8") as f:' \
+            '    rows = list(csv.reader(f))' \
+            '' \
+            'if not rows:' \
+            '    wb.save(output_xlsx)' \
+            '    raise SystemExit' \
+            '' \
+            'header = [cell.strip() for cell in rows[0]]' \
+            'return_columns = {' \
+            '    idx + 1 for idx, name in enumerate(header) if name in {"1W", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "%-chg"}' \
+            '}' \
+            '' \
+            'for row_index, row in enumerate(rows, start=1):' \
+            '    for col_index, value in enumerate(row, start=1):' \
+            '        if row_index == 1:' \
+            '            continue' \
+            '        if col_index not in return_columns:' \
+            '            continue' \
+            '        cell = ws.cell(row=row_index, column=col_index, value=value)' \
+            '        if not value:' \
+            '            continue' \
+            '        try:' \
+            '            numeric = float(value.replace("%", "").replace(",", "").replace("+", ""))' \
+            '        except ValueError:' \
+            '            continue' \
+            '        if numeric < 0:' \
+            '            cell.fill = red_fill' \
+            '        elif numeric > 0:' \
+            '            cell.fill = green_fill' \
+            '' \
+            'for col in ws.columns:' \
+            '    max_len = 0' \
+            '    for cell in col:' \
+            '        v = cell.value or ""' \
+            '        max_len = max(max_len, len(str(v)))' \
+            '    ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 24)' \
+            '' \
+            'wb.save(output_xlsx)' > "$TMP_PY"
+        python3 "$TMP_PY" "$TMP_CSV" "$OUTPUT_CSV"
+        echo "Excel export written to: $OUTPUT_CSV"
+    else
+        mv -f "$TMP_CSV" "$OUTPUT_CSV"
+        echo "CSV export written to: $OUTPUT_CSV"
+    fi
+fi

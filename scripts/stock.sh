@@ -103,10 +103,10 @@ elif [ "$SYMBOL" = "NIFTYENERGY" ]; then
     YAHOO="%5ECNXENERGY"
     SYMBOL="NIFTY_ENERGY"
     NSE_INDEX="NIFTY ENERGY"
-elif [ "$SYMBOL" = "INFRA" ] || [ "$SYMBOL" = "NIFTYINFRA" ]; then
+elif [ "$SYMBOL" = "INFRA" ] || [ "$SYMBOL" = "NIFTYINFRA" ] || [ "$SYMBOL" = "NIFTYINFRASTRUCTURE" ] || [ "$SYMBOL" = "INFRASTRUCTURE" ]; then
     YAHOO="%5ECNXINFRA"
-    SYMBOL="NIFTY_INFRA"
-    NSE_INDEX="NIFTY INFRA"
+    SYMBOL="NIFTY_INFRASTRUCTURE"
+    NSE_INDEX="NIFTY INFRASTRUCTURE"
 elif [ "$SYMBOL" = "MEDIA" ] || [ "$SYMBOL" = "NIFTYMEDIA" ]; then
     YAHOO="%5ECNXMEDIA"
     SYMBOL="NIFTY_MEDIA"
@@ -115,23 +115,23 @@ elif [ "$SYMBOL" = "COMMODITIES" ] || [ "$SYMBOL" = "NIFTYCOMMODITIES" ]; then
     YAHOO="%5ECNXCMDT"
     SYMBOL="NIFTY_COMMODITIES"
     NSE_INDEX="NIFTY COMMODITIES"
-elif [ "$SYMBOL" = "CONSUMPTION" ] || [ "$SYMBOL" = "NIFTYCONSUMPTION" ]; then
+elif [ "$SYMBOL" = "CONSUMPTION" ] || [ "$SYMBOL" = "NIFTYCONSUMPTION" ] || [ "$SYMBOL" = "NIFTYINDIACONSUMPTION" ] || [ "$SYMBOL" = "INDIACONSUMPTION" ]; then
     YAHOO="%5ECNXCONSUM"
-    SYMBOL="NIFTY_CONSUMPTION"
-    NSE_INDEX="NIFTY CONSUMPTION"
+    SYMBOL="NIFTY_INDIA_CONSUMPTION"
+    NSE_INDEX="NIFTY INDIA CONSUMPTION"
 
 # 4. BROAD MARKET MID & SMALL CAPS
-elif [ "$SYMBOL" = "MIDCAP150" ] || [ "$SYMBOL" = "NIFTY_MIDCAP_150" ] || [ "$SYMBOL" = "MIDCAP" ]; then
+elif [ "$SYMBOL" = "MIDCAP150" ] || [ "$SYMBOL" = "NIFTY_MIDCAP_150" ] || [ "$SYMBOL" = "NIFTYMIDCAP150" ] || [ "$SYMBOL" = "MIDCAP" ]; then
     YAHOO="NIFTYMIDCAP150.NS"
     SYMBOL="NIFTY_MIDCAP_150"
     NSE_INDEX="NIFTY MIDCAP 150"
 #elif [ "$SYMBOL" = "SMLCAP100" ] || [ "$SYMBOL" = "NIFTY_SMLCAP_100" ]; then
 #    YAHOO="%5ECNXSC"
 #    SYMBOL="NIFTY_SMALLCAP_100"
-elif [ "$SYMBOL" = "SMLCAP250" ] || [ "$SYMBOL" = "NIFTY_SMLCAP_250" ] || [ "$SYMBOL" = "SMLCAP" ]; then
+elif [ "$SYMBOL" = "SMLCAP250" ] || [ "$SYMBOL" = "NIFTY_SMLCAP_250" ] || [ "$SYMBOL" = "NIFTYSMALLCAP250" ] || [ "$SYMBOL" = "SMALLCAP250" ] || [ "$SYMBOL" = "SMLCAP" ]; then
     YAHOO="NIFTYSMLCAP250.NS"
     SYMBOL="NIFTY_SMALLCAP_250"
-    NSE_INDEX="NIFTY Smallcap 250"
+    NSE_INDEX="NIFTY SMALLCAP 250"
 
 # 5. USER MANUAL FALLBACK OVERRIDES
 elif [[ "$SYMBOL" == *.* ]] || [[ "$SYMBOL" == ^* ]]; then
@@ -208,21 +208,16 @@ if ! download_yahoo "$RECENT_URL" "$TMP_RECENT"; then
     echo '{}' > "$TMP_RECENT"
 fi
 
-if [ -n "$NSE_INDEX" ]; then
-    NSE_URL="https://www.nseindia.com/api/allIndices"
-    if ! curl -L -sS \
-        --connect-timeout 15 \
-        --max-time 60 \
-        -A "Mozilla/5.0" \
-        "$NSE_URL" \
-        -o "$TMP_NSE"; then
-        echo
-        echo "WARNING: Official NSE index range refresh failed."
-        echo "Continuing with Yahoo historical high/low data..."
-        echo
-        echo '{}' > "$TMP_NSE"
-    fi
-else
+NSE_URL="https://www.nseindia.com/api/allIndices"
+if ! curl -L -sS \
+    --connect-timeout 15 \
+    --max-time 60 \
+    -A "Mozilla/5.0" \
+    "$NSE_URL" \
+    -o "$TMP_NSE"; then
+    echo
+    echo "WARNING: NSE allIndices fetch failed. Sector PE/PB will be unavailable."
+    echo
     echo '{}' > "$TMP_NSE"
 fi
 
@@ -230,7 +225,7 @@ fi
 # PYTHON CALCULATIONS
 # ============================================================
 
-python3 - "$TMP_LONG" "$TMP_RECENT" "$TMP_NSE" "$SYMBOL" "$NSE_INDEX" <<'PY'
+python3 - "$TMP_LONG" "$TMP_RECENT" "$TMP_NSE" "$SYMBOL" "$NSE_INDEX" "$YAHOO" <<'PY'
 
 import sys
 import json
@@ -242,6 +237,7 @@ recent_file = sys.argv[2]
 nse_file = sys.argv[3]
 SYMBOL = sys.argv[4]
 NSE_INDEX = sys.argv[5]
+YAHOO = sys.argv[6]
 
 # India timezone without requiring tzdata
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
@@ -612,9 +608,16 @@ def yearly_return(years):
 ret_1y = yearly_return(1)
 ret_3y = yearly_return(3)
 ret_5y = yearly_return(5)
-ret_7_5y = yearly_return(7.5)
 ret_10y = yearly_return(10)
 ret_15y = yearly_return(15)
+
+if nse_index:
+    official_1m = nse_index.get("perChange30d")
+    official_1y = nse_index.get("perChange365d")
+    if official_1m is not None:
+        ret_1m = float(official_1m)
+    if official_1y is not None:
+        ret_1y = float(official_1y)
 
 
 # ============================================================
@@ -692,26 +695,9 @@ long_trend = medium_long_trend([
     ret_1y,
     ret_3y,
     ret_5y,
-    ret_7_5y,
     ret_10y,
     ret_15y
 ])
-
-pivot_high = high_data.get(ref_date, ref_close)
-pivot_low = low_data.get(ref_date, ref_close)
-pivot_close = ref_close
-pivot_point = (pivot_high + pivot_low + pivot_close) / 3
-r1 = (2 * pivot_point) - pivot_low
-s1 = (2 * pivot_point) - pivot_high
-r2 = pivot_point + (pivot_high - pivot_low)
-s2 = pivot_point - (pivot_high - pivot_low)
-
-pivot_bias = "WAIT"
-if ref_close > r1:
-    pivot_bias = "BUY-ABOVE-R1"
-elif ref_close < s1:
-    pivot_bias = "SELL-BELOW-S1"
-
 
 # ============================================================
 # OVERALL ACTION
@@ -729,23 +715,7 @@ bullish_count = sum([
     long_trend in ["STRONG BULLISH", "BULLISH"]
 ])
 
-if (
-    ref_close > r1
-    and short_trend == "BULLISH MOMENTUM"
-    and medium_trend in ["BULLISH", "STRONG BULLISH"]
-    and long_trend in ["BULLISH", "STRONG BULLISH"]
-):
-    action = "BUY - BREAKOUT ABOVE R1"
-
-elif (
-    ref_close < s1
-    and short_trend == "BEARISH MOMENTUM"
-    and medium_trend in ["BEARISH", "STRONG BEARISH"]
-    and long_trend in ["BEARISH", "STRONG BEARISH"]
-):
-    action = "SELL - BREAKDOWN BELOW S1"
-
-elif bearish_count >= 2 and bullish_count == 0:
+if bearish_count >= 2 and bullish_count == 0:
 
     if (
         short_trend == "BEARISH MOMENTUM"
@@ -771,7 +741,6 @@ else:
 
     action = "MIXED - WAIT"
 
-
 # ============================================================
 # TRANCHE LEVELS
 # ============================================================
@@ -784,7 +753,6 @@ step = (T4 - T0) / 4
 T1 = T0 + step
 T2 = T0 + step * 2
 T3 = T0 + step * 3
-
 
 def tranche_position(price):
 
@@ -801,7 +769,6 @@ def tranche_position(price):
         return "T2-H"
 
     return "H"
-
 
 current_tranche = tranche_position(
     ref_close
@@ -832,78 +799,304 @@ from_high = return_pct(
 )
 
 # ============================================================
+# FETCH FUNDAMENTALS
+# ============================================================
+
+def compute_peg_from_summary(pe_value, profit_rows):
+    try:
+        pe = float(pe_value)
+    except (TypeError, ValueError):
+        return None
+
+    if pe <= 0:
+        return None
+
+    profits = []
+    for row in profit_rows or []:
+        try:
+            profit = float(row.get("profit"))
+        except (TypeError, ValueError):
+            continue
+        if profit is not None:
+            profits.append(profit)
+
+    if len(profits) < 2:
+        return None
+
+    first_profit = profits[0]
+    last_profit = profits[-1]
+    if first_profit <= 0 or last_profit <= 0:
+        return None
+
+    periods = len(profits) - 1
+    if periods <= 0:
+        return None
+
+    cagr = (last_profit / first_profit) ** (1.0 / periods) - 1.0
+    if cagr <= 0:
+        return None
+
+    return pe / (cagr * 100.0)
+
+
+fund_data = {
+    "sector": "N/A",
+    "marketCap": "N/A",
+    "marketCapType": "N/A",
+    "peRatio": "N/A",
+    "pegRatio": "N/A",
+    "pbRatio": "N/A",
+    "divYield": "N/A"
+}
+
+INDEX_SECTOR_MAP = {
+    "NIFTY 50": "Large Cap",
+    "NIFTY NEXT 50": "Large Cap",
+    "NIFTY BANK": "Financial Services",
+    "NIFTY PSU BANK": "Financial Services",
+    "NIFTY IT": "Information Technology",
+    "NIFTY AUTO": "Automobile",
+    "NIFTY FMCG": "Consumer Defensive",
+    "NIFTY PHARMA": "Healthcare",
+    "NIFTY METAL": "Basic Materials",
+    "NIFTY REALTY": "Real Estate",
+    "NIFTY ENERGY": "Energy",
+    "NIFTY INFRA": "Industrials",
+    "NIFTY MEDIA": "Communication Services",
+    "NIFTY COMMODITIES": "Commodities",
+    "NIFTY CONSUMPTION": "Consumer Cyclical",
+    "NIFTY INDIA CONSUMPTION": "Consumer Cyclical",
+    "NIFTY INFRA": "Industrials",
+    "NIFTY INFRASTRUCTURE": "Industrials",
+    "NIFTY MIDCAP 150": "Mid Cap",
+    "NIFTY SMALLCAP 250": "Small Cap",
+    "INDIA VIX": "Volatility"
+}
+
+import urllib.request
+import urllib.error
+
+# ── 1. TickerTape: stock-level PE, PB, DivYield, ROE (primary) ──
+try:
+    ticker = YAHOO.replace('.NS', '').replace('.BO', '')
+    tt_search_url = f"https://api.tickertape.in/search?text={ticker}"
+    req_tt1 = urllib.request.Request(tt_search_url, headers={'User-Agent': 'Mozilla/5.0'})
+    resp_tt1 = urllib.request.urlopen(req_tt1, timeout=5)
+    tt_search_data = json.loads(resp_tt1.read().decode('utf-8'))
+    stocks = tt_search_data.get("data", {}).get("stocks", [])
+    sid = None
+    for s in stocks:
+        if s.get("ticker") == ticker:
+            sid = s.get("sid")
+            break
+    if not sid and stocks:
+        sid = stocks[0].get("sid")
+
+    if sid:
+        tt_info_url = f"https://api.tickertape.in/stocks/info/{sid}"
+        req_tt2 = urllib.request.Request(tt_info_url, headers={'User-Agent': 'Mozilla/5.0'})
+        resp_tt2 = urllib.request.urlopen(req_tt2, timeout=5)
+        tt_info = json.loads(resp_tt2.read().decode('utf-8'))
+        ratios  = tt_info.get("data", {}).get("ratios", {})
+        tt_info_data = tt_info.get("data", {}).get("info", {})
+
+        tt_sector = tt_info.get("data", {}).get("gic", {}).get("sector", "")
+        if tt_sector:
+            fund_data["sector"] = tt_sector
+
+        mc_val = ratios.get("marketCap")       # in Crores
+        if mc_val:
+            fund_data["marketCap"] = f"{mc_val:,.0f} Cr"
+            if mc_val > 80000:
+                fund_data["marketCapType"] = "Large Cap"
+            elif mc_val > 25000:
+                fund_data["marketCapType"] = "Mid Cap"
+            else:
+                fund_data["marketCapType"] = "Small Cap"
+
+        pe_val = ratios.get("pe")
+        if pe_val:
+            fund_data["peRatio"] = f"{pe_val:.2f}"
+
+        summary_url = f"https://api.tickertape.in/stocks/summary/{sid}"
+        req_summary = urllib.request.Request(summary_url, headers={'User-Agent': 'Mozilla/5.0'})
+        resp_summary = urllib.request.urlopen(req_summary, timeout=5)
+        summary_data = json.loads(resp_summary.read().decode('utf-8'))
+        profit_rows = summary_data.get("data", {}).get("financialSummary", {}).get("fiscalYearToData", [])
+        calc_peg = compute_peg_from_summary(fund_data["peRatio"], profit_rows)
+        if calc_peg is not None:
+            fund_data["pegRatio"] = f"{calc_peg:.2f}"
+
+        peg_val = ratios.get("peg")
+        if peg_val is None:
+            peg_val = ratios.get("pegRatio")
+        if peg_val is None:
+            peg_val = ratios.get("trailingPegRatio")
+        if peg_val is None:
+            peg_val = ratios.get("ttmPeg")
+        if peg_val not in (None, "") and fund_data["pegRatio"] == "N/A":
+            try:
+                fund_data["pegRatio"] = f"{float(peg_val):.2f}"
+            except (TypeError, ValueError):
+                pass
+
+        pb_val = ratios.get("pb")
+        if pb_val:
+            fund_data["pbRatio"] = f"{pb_val:.2f}"
+
+        dy_val = ratios.get("divYield")
+        if dy_val is not None:
+            fund_data["divYield"] = f"{dy_val:.2f}%"
+
+        roe_val = ratios.get("roe")
+        if roe_val is not None:
+            fund_data["roe"] = f"{roe_val:.2f}%"
+
+except Exception:
+    # ── Fallback: Yahoo Finance ──
+    try:
+        req1 = urllib.request.Request('https://fc.yahoo.com/', headers={'User-Agent': 'Mozilla/5.0'})
+        cookie = ''
+        try:
+            urllib.request.urlopen(req1, timeout=5)
+        except urllib.error.HTTPError as e:
+            cookie = e.headers.get('Set-Cookie')
+
+        if cookie:
+            req2 = urllib.request.Request('https://query1.finance.yahoo.com/v1/test/getcrumb', headers={'User-Agent': 'Mozilla/5.0', 'Cookie': cookie})
+            crumb = urllib.request.urlopen(req2, timeout=5).read().decode('utf-8')
+
+            qs_url = f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{YAHOO}?modules=summaryProfile,summaryDetail,financialData,defaultKeyStatistics&crumb={crumb}"
+            req3 = urllib.request.Request(qs_url, headers={'User-Agent': 'Mozilla/5.0', 'Cookie': cookie})
+            resp3 = urllib.request.urlopen(req3, timeout=10)
+            qs_data = json.loads(resp3.read().decode('utf-8'))
+
+            result = qs_data.get("quoteSummary", {}).get("result", [])
+            if result:
+                res = result[0]
+                fund_data["sector"] = res.get("summaryProfile", {}).get("sector", "N/A")
+
+                mc = res.get("summaryDetail", {}).get("marketCap", {})
+                mc_val = mc.get("raw")
+                if mc_val:
+                    fund_data["marketCap"] = f"{mc_val / 10000000:,.0f} Cr"
+                    if mc_val > 800000000000:
+                        fund_data["marketCapType"] = "Large Cap"
+                    elif mc_val > 250000000000:
+                        fund_data["marketCapType"] = "Mid Cap"
+                    else:
+                        fund_data["marketCapType"] = "Small Cap"
+
+                pe = res.get("summaryDetail", {}).get("trailingPE", {})
+                fund_data["peRatio"] = pe.get("fmt", "N/A")
+
+                peg = res.get("defaultKeyStatistics", {}).get("pegRatio", {})
+                peg_value = peg.get("fmt") or peg.get("raw")
+                if peg_value not in (None, ""):
+                    try:
+                        fund_data["pegRatio"] = f"{float(peg_value):.2f}"
+                    except (TypeError, ValueError):
+                        pass
+
+                pb = res.get("defaultKeyStatistics", {}).get("priceToBook", {})
+                fund_data["pbRatio"] = pb.get("fmt", "N/A")
+
+                dy = res.get("summaryDetail", {}).get("dividendYield", {})
+                fund_data["divYield"] = dy.get("fmt", "N/A")
+
+                roe = res.get("financialData", {}).get("returnOnEquity", {})
+                fund_data["roe"] = roe.get("fmt", "N/A")
+    except Exception:
+        pass
+
+# ── 2. NSE allIndices: official PE, PB, Div Yield, and index sector labels ──
+SECTOR_INDEX_MAP = {
+    "Technology":             "NIFTY IT",
+    "Information Technology": "NIFTY IT",
+    "Financial Services":     "NIFTY FINANCIAL SERVICES",
+    "Healthcare":             "NIFTY HEALTHCARE INDEX",
+    "Pharmaceutical":         "NIFTY PHARMA",
+    "Basic Materials":        "NIFTY METAL",
+    "Consumer Cyclical":      "NIFTY CONSUMER DURABLES",
+    "Consumer Defensive":     "NIFTY FMCG",
+    "Consumer Staples":       "NIFTY FMCG",
+    "Industrials":            "NIFTY INFRASTRUCTURE",
+    "Energy":                 "NIFTY ENERGY",
+    "Utilities":              "NIFTY ENERGY",
+    "Communication Services": "NIFTY MEDIA",
+    "Real Estate":            "NIFTY REALTY",
+    "Automobile":             "NIFTY AUTO",
+}
+
+if nse_index:
+    index_name = nse_index.get("index")
+    if index_name:
+        fund_data["sector"] = INDEX_SECTOR_MAP.get(index_name, fund_data["sector"])
+        if fund_data["marketCapType"] == "N/A":
+            fund_data["marketCapType"] = "Index"
+
+    nse_pe = nse_index.get("pe")
+    nse_pb = nse_index.get("pb")
+    nse_dy = nse_index.get("dy")
+    if nse_pe not in (None, "", "N/A"):
+        try:
+            fund_data["peRatio"] = f"{float(nse_pe):.2f}"
+        except ValueError:
+            pass
+    if nse_pb not in (None, "", "N/A"):
+        try:
+            fund_data["pbRatio"] = f"{float(nse_pb):.2f}"
+        except ValueError:
+            pass
+    if nse_dy not in (None, "", "N/A"):
+        try:
+            fund_data["divYield"] = f"{float(nse_dy):.2f}%"
+        except ValueError:
+            pass
+
+# Sector-level PE/PB/dividend fields removed intentionally. The dashboard and output now
+# use only the direct stock-level values from Tickertape or Yahoo fallback.
+
+# ============================================================
 # OUTPUT
 # ============================================================
 
 print("=================================================")
-print(f"Reference Date  : {ref_date}")
-print(f"Reference Close : Rs. {ref_close:.2f}")
-print("-------------------------------------------------")
-print(f"52-Week Low     : Rs. {low_52:.2f}")
-print(f"From 52W Low    : {fmt_pct(from_low)}")
-print(f"52W Low Date    : {low_date}")
-print(f"52-Week High    : Rs. {high_52:.2f}")
-print(f"From 52W High   : {fmt_pct(from_high)}")
-print(f"52W High Date   : {high_date}")
-
+if nse_index:
+    print("      INDEX DETAILS & FUNDAMENTALS")
+else:
+    print("        STOCK DETAILS & FUNDAMENTALS")
+print("=================================================")
+print(f"LTP             : Rs. {ref_close:.2f}")
+print(f"LTP date        : {ref_date}")
+print(f"Mode            : {'INDEX' if nse_index else 'STOCK'}")
+print(f"Sector          : {fund_data['sector']}")
+print(f"MarketType      : {fund_data['marketCapType']}")
+print(f"PE              : {fund_data['peRatio']}")
+print(f"PEG             : {fund_data['pegRatio']}")
+print(f"PB              : {fund_data['pbRatio']}")
+print(f"DivYield        : {fund_data['divYield']}")
 print()
 print("=================================================")
-print("             SHORT-TERM MOMENTUM")
+print("             ABSOLUTE RETURNS")
 print("=================================================")
 print(f"1W Return       : {fmt_pct(ret_5d)}")
-print(f"2W Return       : {fmt_pct(ret_10d)}")
-print("-------------------------------------------------")
-print(f"Short Trend     : {short_trend}")
-
-print()
-print("=================================================")
-print("              MEDIUM-TERM RETURNS")
-print("=================================================")
 print(f"1M Return       : {fmt_pct(ret_1m)}")
 print(f"3M Return       : {fmt_pct(ret_3m)}")
-print(f"4.5M Return     : {fmt_pct(ret_45m)}")
 print(f"6M Return       : {fmt_pct(ret_6m)}")
-print(f"9M Return       : {fmt_pct(ret_9m)}")
 print(f"YTD Return      : {fmt_pct(ytd_return)}")
-print("-------------------------------------------------")
-print(f"Medium Trend    : {medium_trend}")
-
-print()
-print("=================================================")
-print("               LONG-TERM RETURNS")
-print("=================================================")
 print(f"1Y Return       : {fmt_pct(ret_1y)}")
 print(f"3Y Return       : {fmt_pct(ret_3y)}")
 print(f"5Y Return       : {fmt_pct(ret_5y)}")
-print(f"7.5Y Return     : {fmt_pct(ret_7_5y)}")
-print(f"10Y Return      : {fmt_pct(ret_10y)}")
-print(f"15Y Return      : {fmt_pct(ret_15y)}")
-print("-------------------------------------------------")
-print(f"Long Trend      : {long_trend}")
-
 print()
 print("=================================================")
+print("             52 WEEK RANGE")
 print("=================================================")
-print(f"ACTION          : {action}")
-print("=================================================")
-print("=================================================")
-print("                TRANCHE LEVELS")
-print("=================================================")
-print(f"L               : Rs. {T0:.2f}")
-print(f"T1              : Rs. {T1:.2f}")
-print(f"M               : Rs. {T2:.2f}")
-print(f"T2              : Rs. {T3:.2f}")
-print(f"H               : Rs. {T4:.2f}")
-print("-------------------------------------------------")
-print(f"Reference Close : Rs. {ref_close:.2f}")
-print(f"Current Tranche : {current_tranche}")
-print("-------------------------------------------------")
-print(f"Pivot Point     : Rs. {pivot_point:.2f}")
-print(f"R1              : Rs. {r1:.2f} [Breakout buy trigger]")
-print(f"S1              : Rs. {s1:.2f} [Breakdown sell trigger]")
-print(f"R2              : Rs. {r2:.2f} [Target / extension]")
-print(f"S2              : Rs. {s2:.2f} [Stop / panic zone]")
-print(f"Pivot Bias      : {pivot_bias}")
-print()
+print(f"52WH            : Rs. {high_52:.2f}")
+print(f"52WH %-chg      : {fmt_pct(from_high)}")
+print(f"52WH Date       : {high_date}")
+print(f"52WL            : Rs. {low_52:.2f}")
+print(f"52WL %-chg      : {fmt_pct(from_low)}")
+print(f"52WL Date       : {low_date}")
 
 PY

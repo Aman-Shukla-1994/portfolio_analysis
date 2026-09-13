@@ -1,0 +1,18 @@
+.env
+.env.*
+!.env.example
+
+# Local/session-specific runtime data
+cookie.txt
+nse_cookies.txt
+*.html
+*.log
+__pycache__/
+.pytest_cache/
+*.pyc
+*.csv
+*.xlsx
+*.xls
+
+# Optional local scratch files
+*.tmp

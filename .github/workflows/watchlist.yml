@@ -15,6 +15,11 @@ on:
           - holdings.txt
           - indices.txt
           - ipo.txt
+      color_coding:
+        description: Send an email with the generated CSV when enabled
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -28,9 +33,29 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Run dashboard
+      - name: Run dashboard and export CSV
         env:
           WATCHLIST: ${{ inputs.watchlist }}
         run: |
           set -o pipefail
-          bash scripts/watchlist.sh "watchlists/$WATCHLIST"
+          bash scripts/watchlist.sh "watchlists/$WATCHLIST" "$GITHUB_WORKSPACE/watchlist.csv"
+
+      - name: Send watchlist email
+        if: ${{ inputs.color_coding == true && secrets.SMTP_SERVER != '' && secrets.SMTP_USERNAME != '' && secrets.SMTP_PASSWORD != '' && secrets.EMAIL_TO != '' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT || 587 }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "Watchlist analysis: ${{ inputs.watchlist }}"
+          to: ${{ secrets.EMAIL_TO }}
+          from: ${{ secrets.EMAIL_FROM || secrets.SMTP_USERNAME }}
+          secure: true
+          attachments: ${{ github.workspace }}/watchlist.csv
+          body: |
+            Watchlist: ${{ inputs.watchlist }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Color-coding enabled: ${{ inputs.color_coding }}
+
+            Attached CSV file contains the latest computed values for this run.
