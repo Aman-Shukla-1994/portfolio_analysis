@@ -1056,6 +1056,11 @@ if nse_index:
 
 # Sector-level PE/PB/dividend fields removed intentionally. The dashboard and output now
 # use only the direct stock-level values from Tickertape or Yahoo fallback.
+#
+# NSE does expose index-level PE/PB/dividend values via its allIndices feed, but for
+# individual stocks there is no reliable official direct PE/PB source on the NSE website.
+# Hence the script prefers Tickertape for stock-level ratios and only uses the NSE
+# allIndices values for index mode when those official fields are available.
 
 # ============================================================
 # OUTPUT
