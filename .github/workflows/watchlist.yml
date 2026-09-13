@@ -60,7 +60,7 @@ jobs:
           echo "::warning::Email skipped. Configure repository secrets SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, EMAIL_TO, and EMAIL_FROM."
 
       - name: Send watchlist email
-        if: ${{ env.SMTP_SERVER != '' && env.SMTP_PORT != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != '' && env.EMAIL_TO != '' && env.EMAIL_FROM != '' }}
+        if: ${{ inputs.send_email == true && env.SMTP_SERVER != '' && env.SMTP_PORT != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != '' && env.EMAIL_TO != '' && env.EMAIL_FROM != '' }}
         uses: dawidd6/action-send-mail@v21
         with:
           server_address: ${{ env.SMTP_SERVER }}

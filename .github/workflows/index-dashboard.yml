@@ -26,6 +26,16 @@ on:
           - niftypsubank
           - niftyrealty
           - niftysmallcap250
+      all_indices:
+        description: Run the dashboard for every index
+        required: false
+        type: boolean
+        default: false
+      send_email:
+        description: Whether to send an email with the index dashboard XLSX attached
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -47,26 +57,50 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Validate selected index
+        if: ${{ inputs.all_indices != true }}
         env:
           INDEX_ALIAS: ${{ inputs.index }}
         run: |
           set -euo pipefail
           grep -Fxq "$INDEX_ALIAS" watchlists/indices
 
-      - name: Run ${{ inputs.index }} dashboard
+      - name: Install XLSX export dependency
+        run: python3 -m pip install --disable-pip-version-check openpyxl
+
+      - name: Run selected index dashboard
+        if: ${{ inputs.all_indices != true }}
         env:
           INDEX_ALIAS: ${{ inputs.index }}
         run: |
           set -Eeuo pipefail
-          bash scripts/index_dashboard.sh "$INDEX_ALIAS" "$GITHUB_WORKSPACE/${{ inputs.index }}_dashboard.csv"
+          bash scripts/index_dashboard.sh "$INDEX_ALIAS" "$GITHUB_WORKSPACE/${{ inputs.index }}_dashboard.xlsx"
 
-      - name: Upload ${{ inputs.index }} CSV artifact
+      - name: Run all index dashboards
+        if: ${{ inputs.all_indices == true }}
+        run: |
+          set -Eeuo pipefail
+          while IFS= read -r index_alias; do
+            [ -z "$index_alias" ] && continue
+            bash scripts/index_dashboard.sh "$index_alias" "$GITHUB_WORKSPACE/${index_alias}_dashboard.xlsx"
+          done < watchlists/indices
+
+      - name: Prepare dashboard email attachments
+        run: |
+          set -Eeuo pipefail
+          attachments=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -name '*_dashboard.xlsx' -printf '%p,' | sed 's/,$//')
+          if [ -z "$attachments" ]; then
+            echo "No dashboard workbooks were generated."
+            exit 1
+          fi
+          echo "INDEX_ATTACHMENTS=$attachments" >> "$GITHUB_ENV"
+
+      - name: Upload index XLSX artifact
         uses: actions/upload-artifact@v7
         env:
           ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
         with:
-          name: index-${{ inputs.index }}-csv
-          path: ${{ github.workspace }}/${{ inputs.index }}_dashboard.csv
+          name: index-dashboards-xlsx
+          path: ${{ github.workspace }}/*_dashboard.xlsx
           if-no-files-found: error
           retention-days: 7
 
@@ -76,7 +110,7 @@ jobs:
           echo "::warning::Email skipped. Configure repository secrets SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, EMAIL_TO, and EMAIL_FROM."
 
       - name: Send email
-        if: ${{ env.SMTP_SERVER != '' && env.SMTP_PORT != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != '' && env.EMAIL_TO != '' && env.EMAIL_FROM != '' }}
+        if: ${{ inputs.send_email == true && env.SMTP_SERVER != '' && env.SMTP_PORT != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != '' && env.EMAIL_TO != '' && env.EMAIL_FROM != '' }}
         uses: dawidd6/action-send-mail@v21
         with:
           server_address: ${{ env.SMTP_SERVER }}
@@ -85,12 +119,12 @@ jobs:
           require_tls: true
           username: ${{ env.SMTP_USERNAME }}
           password: ${{ env.SMTP_PASSWORD }}
-          subject: "Index dashboard: ${{ inputs.index }}"
+          subject: "Index dashboards: ${{ inputs.all_indices == true && 'all' || inputs.index }}"
           to: ${{ env.EMAIL_TO }}
           from: ${{ env.EMAIL_FROM }}
-          attachments: ${{ github.workspace }}/${{ inputs.index }}_dashboard.csv
+          attachments: ${{ env.INDEX_ATTACHMENTS }}
           body: |
-            Index: ${{ inputs.index }}
+            Index: ${{ inputs.all_indices == true && 'all' || inputs.index }}
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-            Attached CSV file contains the latest computed values for this run.
+            Attached XLSX file(s) contain the latest computed values for this run.

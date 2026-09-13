@@ -92,6 +92,8 @@ bash scripts/watchlist.sh watchlists/indices output/indices.xlsx
 
 CSV files cannot store cell colors. The watchlist GitHub Actions workflow therefore uploads and emails the colored `.xlsx` workbook.
 
+The index GitHub Actions workflow has an `all_indices` checkbox. When checked, it runs every alias in `watchlists/indices` and uploads/emails the resulting colored XLSX workbooks. The selected index value is ignored in that mode.
+
 ## Output
 
 For each symbol, `stock.sh` reports:

@@ -3,9 +3,9 @@
 set -u
 
 if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-    echo "Usage: $0 <index-alias> [output.csv]"
+    echo "Usage: $0 <index-alias> [output-file]"
     echo "Example: $0 auto"
-    echo "Example: $0 niftyauto output.csv"
+    echo "Example: $0 niftyauto output.xlsx"
     exit 1
 fi
 
