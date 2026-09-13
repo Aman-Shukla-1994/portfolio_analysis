@@ -40,6 +40,14 @@ jobs:
           set -o pipefail
           bash scripts/watchlist.sh "watchlists/$WATCHLIST" "$GITHUB_WORKSPACE/watchlist.csv"
 
+      - name: Upload watchlist CSV artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: watchlist-${{ inputs.watchlist }}-csv
+          path: ${{ github.workspace }}/watchlist.csv
+          if-no-files-found: error
+
       - name: Send watchlist email
         if: ${{ inputs.color_coding == true && env.SMTP_SERVER != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != '' && env.EMAIL_TO != '' }}
         env:
@@ -58,7 +66,8 @@ jobs:
           subject: "Watchlist analysis: ${{ inputs.watchlist }}"
           to: ${{ env.EMAIL_TO }}
           from: ${{ env.EMAIL_FROM }}
-          secure: true
+          secure: false
+          tls: true
           attachments: ${{ github.workspace }}/watchlist.csv
           body: |
             Watchlist: ${{ inputs.watchlist }}

@@ -25,7 +25,7 @@ on:
           - niftypharma
           - niftypsubank
           - niftyrealty
-          - niftysmlcap250
+          - niftysmallcap250
 
 permissions:
   contents: read
@@ -44,6 +44,14 @@ jobs:
           INDEX_ALIAS: ${{ inputs.index }}
         run: |
           set -euo pipefail
+          case "$INDEX_ALIAS" in
+            niftysmlcap250|smallcap250)
+              INDEX_ALIAS="niftysmallcap250"
+              ;;
+            niftyindiaconsumption|indiaconsumption)
+              INDEX_ALIAS="niftyindiaconsumption"
+              ;;
+          esac
           grep -Fxq "$INDEX_ALIAS" watchlists/indices.txt
 
       - name: Run index dashboard
@@ -51,4 +59,39 @@ jobs:
           INDEX_ALIAS: ${{ inputs.index }}
         run: |
           set -o pipefail
-          bash scripts/index_dashboard.sh "$INDEX_ALIAS"
+          bash scripts/index_dashboard.sh "$INDEX_ALIAS" "$GITHUB_WORKSPACE/index_dashboard.csv"
+
+      - name: Upload index CSV artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: index-${{ inputs.index }}-csv
+          path: ${{ github.workspace }}/index_dashboard.csv
+          if-no-files-found: error
+
+      - name: Send index email
+        if: ${{ env.SMTP_SERVER != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != '' && env.EMAIL_TO != '' }}
+        env:
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || 587 }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM || secrets.SMTP_USERNAME }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ env.SMTP_SERVER }}
+          server_port: ${{ env.SMTP_PORT }}
+          username: ${{ env.SMTP_USERNAME }}
+          password: ${{ env.SMTP_PASSWORD }}
+          subject: "Index dashboard: ${{ inputs.index }}"
+          to: ${{ env.EMAIL_TO }}
+          from: ${{ env.EMAIL_FROM }}
+          secure: false
+          tls: true
+          attachments: ${{ github.workspace }}/index_dashboard.csv
+          body: |
+            Index: ${{ inputs.index }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Attached CSV file contains the latest computed values for this run.
