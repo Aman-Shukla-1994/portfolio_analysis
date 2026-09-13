@@ -42,7 +42,7 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze ${{ inputs.index }} index
+    name: Analyze ${{ inputs.all_indices == true && 'ALLINDICES' || inputs.index }}
     runs-on: ubuntu-latest
     env:
       SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
@@ -80,12 +80,12 @@ jobs:
         run: |
           set -Eeuo pipefail
           pids=()
-          while IFS= read -r index_alias; do
+          while IFS= read -r index_alias || [ -n "$index_alias" ]; do
             [ -z "$index_alias" ] && continue
             echo "Starting ${index_alias} dashboard"
             bash scripts/index_dashboard.sh "$index_alias" "$GITHUB_WORKSPACE/${index_alias}_dashboard.xlsx" &
             pids+=("$!")
-          done < watchlists/indices
+          done < <(sed -e 's/\r$//' watchlists/indices)
 
           failed=0
           for pid in "${pids[@]}"; do

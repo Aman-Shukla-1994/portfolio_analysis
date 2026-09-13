@@ -52,7 +52,7 @@ Yahoo-style symbols can also be supplied directly when needed, such as `BRITANNI
 bash scripts/watchlist.sh watchlists/holdings
 ```
 
-`holdings` contains one stock or index symbol per line. Blank lines are ignored. The dashboard analyzes every symbol, reports its 52-week low and high, preserves failed symbols as visible error rows, sorts results by the calculated action, and prints a colorized summary.
+`holdings` contains one stock or index symbol per line. Blank lines are ignored. The dashboard analyzes every symbol, reports its 52-week low and high, preserves failed symbols as visible error rows, and prints a colorized summary.
 
 Available watchlists include:
 
@@ -159,7 +159,7 @@ bash scripts/stock.sh NIFTY
 
 The **Run watchlist dashboard** workflow can be started manually from the Actions tab and exposes the current watchlists under `watchlists/`. The **Analyze stock symbols** workflow accepts a comma-separated string such as `RELIANCE, TCS, NIFTY` and runs the calculator for each symbol in order. Each workflow retrieves live market data and uploads its report as a workflow artifact.
 
-The **Run index dashboard** workflow accepts an index alias from `watchlists/indices` and runs `scripts/index_dashboard.sh` for that index. The selectable aliases are maintained from the same watchlist and validated again during the workflow run.
+The **Run index dashboard** workflow accepts an index alias from `watchlists/indices` and runs `scripts/index_dashboard.sh` for that index. The selectable aliases are maintained from the same watchlist and validated again during the workflow run. Enable the `all_indices` checkbox to process every configured index, including `niftysmallcap250`; the workflow produces one colored XLSX workbook per index. The `send_email` checkbox controls whether those workbooks are emailed.
 
 To enable workflow email delivery, add these values as GitHub Actions repository secrets:
 
