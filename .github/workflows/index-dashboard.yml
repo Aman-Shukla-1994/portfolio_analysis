@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       index:
-        description: Index alias from watchlists/indices.txt
+        description: Index alias from watchlists/indices
         required: true
         type: choice
         options:
@@ -51,7 +51,7 @@ jobs:
           INDEX_ALIAS: ${{ inputs.index }}
         run: |
           set -euo pipefail
-          grep -Fxq "$INDEX_ALIAS" watchlists/indices.txt
+          grep -Fxq "$INDEX_ALIAS" watchlists/indices
 
       - name: Run ${{ inputs.index }} dashboard
         env:

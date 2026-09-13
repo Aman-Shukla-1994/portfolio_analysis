@@ -11,7 +11,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-INDEX_FILE="$REPO_ROOT/watchlists/indices.txt"
+INDEX_FILE="$REPO_ROOT/watchlists/indices"
 INDEX_INPUT="$1"
 INDEX_ALIAS="$(echo "$INDEX_INPUT" | tr '[:upper:]' '[:lower:]')"
 TMP_INDEX_FILE="$(mktemp)"
@@ -90,14 +90,14 @@ fi
 
 if ! grep -Eq "^${INDEX_ALIAS}$" "$INDEX_FILE" 2>/dev/null; then
     echo "Unsupported index alias: $INDEX_INPUT"
-    echo "Supported aliases from watchlists/indices.txt:"
+    echo "Supported aliases from watchlists/indices:"
     cat "$INDEX_FILE" 2>/dev/null || echo "(watchlist not found)"
     exit 1
 fi
 
 # Try to use a dedicated watchlist file if one already exists for this alias.
-if [ -f "$REPO_ROOT/watchlists/${INDEX_ALIAS}.txt" ]; then
-    cp "$REPO_ROOT/watchlists/${INDEX_ALIAS}.txt" "$TMP_INDEX_FILE"
+if [ -f "$REPO_ROOT/watchlists/${INDEX_ALIAS}" ]; then
+    cp "$REPO_ROOT/watchlists/${INDEX_ALIAS}" "$TMP_INDEX_FILE"
     if [ $# -eq 2 ]; then
         bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE" "$2"
     else

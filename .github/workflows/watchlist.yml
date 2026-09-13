@@ -15,6 +15,7 @@ on:
           - holdings
           - indices
           - ipo
+          - myNewList
 
 permissions:
   contents: read

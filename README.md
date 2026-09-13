@@ -22,7 +22,7 @@ bash scripts/stock.sh NIFTY
 bash scripts/stock.sh "RELIANCE,TCS,NIFTY"
 ```
 
-The symbol is normalized to uppercase. You may provide a single symbol, multiple separate arguments, or a single comma-separated string. Regular stock symbols default to the Yahoo Finance `.NS` suffix. The repo follows a consistent Nifty-prefixed naming scheme for Nifty-linked indices. Canonical names in `watchlists/indices.txt` are:
+The symbol is normalized to uppercase. You may provide a single symbol, multiple separate arguments, or a single comma-separated string. Regular stock symbols default to the Yahoo Finance `.NS` suffix. The repo follows a consistent Nifty-prefixed naming scheme for Nifty-linked indices. Canonical names in `watchlists/indices` are:
 
 - `nifty50`
 - `niftyauto`
@@ -50,36 +50,36 @@ Yahoo-style symbols can also be supplied directly when needed, such as `BRITANNI
 ### Run the holdings dashboard
 
 ```bash
-bash scripts/watchlist.sh watchlists/holdings.txt
+bash scripts/watchlist.sh watchlists/holdings
 ```
 
-`holdings.txt` contains one stock or index symbol per line. Blank lines are ignored. The dashboard analyzes every symbol, reports its 52-week low and high, preserves failed symbols as visible error rows, sorts results by the calculated action, and prints a colorized summary.
+`holdings` contains one stock or index symbol per line. Blank lines are ignored. The dashboard analyzes every symbol, reports its 52-week low and high, preserves failed symbols as visible error rows, sorts results by the calculated action, and prints a colorized summary.
 
 Available watchlists include:
 
-- `watchlists/holdings.txt`
-- `watchlists/indices.txt`
-- `watchlists/ipo.txt`
-- `watchlists/dividendStocks.txt`
-- `watchlists/etfs.txt`
-- `watchlists/globalIndices.txt`
+- `watchlists/holdings`
+- `watchlists/indices`
+- `watchlists/ipo`
+- `watchlists/dividendStocks`
+- `watchlists/etfs`
+- `watchlists/globalIndices`
 
 To use another watchlist:
 
 ```bash
-bash scripts/watchlist.sh path/to/watchlist.txt
+bash scripts/watchlist.sh path/to/watchlist
 ```
 
 To get the 52-week low and high for every configured index:
 
 ```bash
-bash scripts/watchlist.sh watchlists/indices.txt
+bash scripts/watchlist.sh watchlists/indices
 ```
 
 To export the same compact table as CSV:
 
 ```bash
-bash scripts/watchlist.sh watchlists/indices.txt output/indices.csv
+bash scripts/watchlist.sh watchlists/indices output/indices.csv
 bash scripts/index_dashboard.sh niftyauto output/niftyauto.csv
 ```
 
@@ -87,7 +87,7 @@ To export an Excel workbook with green positive returns and red negative returns
 
 ```bash
 python3 -m pip install openpyxl
-bash scripts/watchlist.sh watchlists/indices.txt output/indices.xlsx
+bash scripts/watchlist.sh watchlists/indices output/indices.xlsx
 ```
 
 CSV files cannot store cell colors. The watchlist GitHub Actions workflow therefore uploads and emails the colored `.xlsx` workbook.
@@ -158,7 +158,7 @@ bash scripts/stock.sh NIFTY
 
 The **Run watchlist dashboard** workflow can be started manually from the Actions tab and exposes the current watchlists under `watchlists/`. The **Analyze stock symbols** workflow accepts a comma-separated string such as `RELIANCE, TCS, NIFTY` and runs the calculator for each symbol in order. Each workflow retrieves live market data and uploads its report as a workflow artifact.
 
-The **Run index dashboard** workflow accepts an index alias from `watchlists/indices.txt` and runs `scripts/index_dashboard.sh` for that index. The selectable aliases are maintained from the same watchlist and validated again during the workflow run.
+The **Run index dashboard** workflow accepts an index alias from `watchlists/indices` and runs `scripts/index_dashboard.sh` for that index. The selectable aliases are maintained from the same watchlist and validated again during the workflow run.
 
 To enable workflow email delivery, add these values as GitHub Actions repository secrets:
 
@@ -176,9 +176,9 @@ The local `.env` file is ignored and is not uploaded to GitHub Actions. Configur
 - `scripts/stock.sh` - single-symbol data download, calculations, trend classification, and report generation.
 - `scripts/watchlist.sh` - batch processing and colorized dashboard rendering.
 - `scripts/index_dashboard.sh` - resolves index aliases and downloads index constituents for the batch dashboard.
-- `watchlists/holdings.txt` - default stock watchlist.
-- `watchlists/indices.txt` - index/watchlist aliases.
-- `watchlists/dividendStocks.txt`, `watchlists/etfs.txt`, `watchlists/globalIndices.txt`, and `watchlists/ipo.txt` - additional selectable watchlists.
+- `watchlists/holdings` - default stock watchlist.
+- `watchlists/indices` - index/watchlist aliases.
+- `watchlists/dividendStocks`, `watchlists/etfs`, `watchlists/globalIndices`, and `watchlists/ipo` - additional selectable watchlists.
 - `.github/copilot-instructions.md` - repository-specific guidance for Copilot sessions.
 
 The dashboard uses temporary files for intermediate output and does not create generated files in the repository.
