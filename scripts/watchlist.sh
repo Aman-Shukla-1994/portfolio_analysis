@@ -35,6 +35,10 @@ if [ -z "$WATCHLIST" ]; then
     exit 1
 fi
 
+if [ "$(basename "$WATCHLIST")" = "bseEQETF" ]; then
+    export NSE_ETF_HISTORY=1
+fi
+
 TMP_OUTPUT=$(mktemp)
 TMP_CSV=$(mktemp)
 TMP_PY=$(mktemp)
