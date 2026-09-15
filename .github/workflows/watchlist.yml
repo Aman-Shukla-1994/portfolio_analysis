@@ -10,8 +10,14 @@ on:
         type: choice
         options:
           - dividendStocks
+          - bond
           - etfs
           - globalIndices
+          - gold
+          - gsecs
+          - silver
+          - liquid
+          - msci
           - holdings
           - indices
           - ipo
