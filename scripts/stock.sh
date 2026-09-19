@@ -539,7 +539,6 @@ def calendar_return(months=0, extra_days=0):
 
 
 ret_1m = calendar_return(months=1)
-ret_2m = calendar_return(months=2)
 ret_3m = calendar_return(months=3)
 
 # 4.5 months = 4 calendar months + 15 days
@@ -756,53 +755,6 @@ else:
 
     action = "MIXED - WAIT"
 
-# ============================================================
-# TRANCHE LEVELS
-# ============================================================
-
-T0 = low_52
-T4 = high_52
-
-step = (T4 - T0) / 4
-
-T1 = T0 + step
-T2 = T0 + step * 2
-T3 = T0 + step * 3
-
-def tranche_position(price):
-
-    if price <= T0:
-        return "L"
-
-    if price < T1:
-        return "L-T1"
-
-    if price < T3:
-        return "M-T2"
-
-    if price < T4:
-        return "T2-H"
-
-    return "H"
-
-current_tranche = tranche_position(
-    ref_close
-)
-
-# Support / resistance zones built on the same 52-week tranche model.
-strong_support = T1
-support_zone_low = T0
-support_zone_high = T1
-
-strong_resistance = T3
-resistance_zone_low = T3
-resistance_zone_high = T4
-
-buy_zone_low = support_zone_low
-buy_zone_high = strong_support
-sell_zone_low = strong_resistance
-sell_zone_high = resistance_zone_high
-
 from_low = return_pct(
     ltp,
     low_52
@@ -816,7 +768,6 @@ from_high = math.trunc((ltp - high_52) / high_52 * 100 * 100) / 100
 
 fund_data = {
     "sector": "N/A",
-    "marketCap": "N/A",
     "marketCapType": "N/A",
     "peRatio": "N/A",
     "pbRatio": "N/A",
@@ -845,25 +796,6 @@ INDEX_SECTOR_MAP = {
     "NIFTY MIDCAP 150": "Mid Cap",
     "NIFTY SMALLCAP 250": "Small Cap",
     "INDIA VIX": "Volatility"
-}
-
-# ── NSE allIndices: official values for recognized indices ──
-SECTOR_INDEX_MAP = {
-    "Technology":             "NIFTY IT",
-    "Information Technology": "NIFTY IT",
-    "Financial Services":     "NIFTY FINANCIAL SERVICES",
-    "Healthcare":             "NIFTY HEALTHCARE INDEX",
-    "Pharmaceutical":         "NIFTY PHARMA",
-    "Basic Materials":        "NIFTY METAL",
-    "Consumer Cyclical":      "NIFTY CONSUMER DURABLES",
-    "Consumer Defensive":     "NIFTY FMCG",
-    "Consumer Staples":       "NIFTY FMCG",
-    "Industrials":            "NIFTY INFRASTRUCTURE",
-    "Energy":                 "NIFTY ENERGY",
-    "Utilities":              "NIFTY ENERGY",
-    "Communication Services": "NIFTY MEDIA",
-    "Real Estate":            "NIFTY REALTY",
-    "Automobile":             "NIFTY AUTO",
 }
 
 if nse_index:
