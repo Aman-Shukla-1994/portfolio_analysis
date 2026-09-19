@@ -12,7 +12,6 @@ on:
           - dividendStocks
           - etfs
           - holdings
-          - indices
           - ipo
           - myNewList
       send_email:
