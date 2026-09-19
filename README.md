@@ -71,24 +71,6 @@ For each stock symbol, `stock.sh` reports:
 
 The calculator downloads a 10-year daily history and overlays a recent 10-day download so the latest available sessions are refreshed. Data is converted to India Standard Time before trading dates are selected. Stock symbols and watchlists use Yahoo history for returns; index-specific return overrides are not used.
 
-## Pivot trigger logic
-
-The script also calculates a daily pivot setup using the latest bar:
-
-```text
-Pivot Point = (High + Low + Close) / 3
-R1 = 2 * Pivot Point - Low
-S1 = 2 * Pivot Point - High
-R2 = Pivot Point + (High - Low)
-S2 = Pivot Point - (High - Low)
-```
-
-The breakout and breakdown trigger levels are still used for interpretation:
-
-- price above `R1` strengthens the bullish case
-- price below `S1` strengthens the bearish case
-- price between them is treated as a wait / accumulate zone
-
 ## Development checks
 
 There is no automated test suite or package manager. Run shell syntax checks before submitting changes:

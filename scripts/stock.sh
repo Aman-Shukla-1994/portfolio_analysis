@@ -114,7 +114,7 @@ fi
 # PYTHON CALCULATIONS
 # ============================================================
 
-python3 - "$TMP_LONG" "$TMP_RECENT" "$SYMBOL" "$YAHOO" <<'PY'
+python3 - "$TMP_LONG" "$TMP_RECENT" <<'PY'
 
 import sys
 import json
@@ -124,8 +124,6 @@ import math
 
 long_file = sys.argv[1]
 recent_file = sys.argv[2]
-SYMBOL = sys.argv[3]
-YAHOO = sys.argv[4]
 
 # India timezone without requiring tzdata
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
@@ -235,29 +233,11 @@ def nearest_on_or_before(data, target):
     return d, data[d]
 
 
-def trading_return(data, reference_date, reference_close, sessions):
-
-    dates = sorted(
-        d for d in data
-        if d <= reference_date
-    )
-
-    if len(dates) <= sessions:
-        return None
-
-    old_date = dates[-(sessions + 1)]
-
-    return return_pct(
-        reference_close,
-        data[old_date]
-    )
-
-
 # ============================================================
 # LOAD + MERGE
 # ============================================================
 
-long_close, long_high, long_low, meta_long = load_yahoo(long_file)
+long_close, long_high, long_low, _ = load_yahoo(long_file)
 recent_close, recent_high, recent_low, meta_recent = load_yahoo(recent_file)
 
 data = dict(long_close)
@@ -364,19 +344,11 @@ high_52 = week52_highs[high_date]
 # ============================================================
 
 one_week_target = ltp_date - datetime.timedelta(days=7)
-one_week_date, one_week_close = nearest_on_or_before(
+_, one_week_close = nearest_on_or_before(
     return_data,
     one_week_target
 )
 ret_5d = return_pct(ltp, one_week_close)
-
-ret_10d = trading_return(
-    return_data,
-    ltp_date,
-    ltp,
-    10
-)
-
 
 # ============================================================
 # CALENDAR RETURN
@@ -407,7 +379,7 @@ def calendar_return(months=0, extra_days=0):
         days=extra_days
     )
 
-    old_date, old_close = nearest_on_or_before(
+    _, old_close = nearest_on_or_before(
         return_data,
         target
     )
@@ -422,13 +394,7 @@ ret_1m = calendar_return(months=1)
 ret_3m = calendar_return(months=3)
 
 # 4.5 months = 4 calendar months + 15 days
-ret_45m = calendar_return(
-    months=4,
-    extra_days=15
-)
-
 ret_6m = calendar_return(months=6)
-ret_9m = calendar_return(months=9)
 
 
 # ============================================================
@@ -448,8 +414,7 @@ ytd_dates = sorted(
 
 if len(ytd_dates) > 1:
 
-    ytd_start_date = ytd_dates[0]
-    ytd_start_close = data[ytd_start_date]
+    ytd_start_close = data[ytd_dates[0]]
 
     ytd_return = return_pct(
         ltp,
@@ -458,7 +423,6 @@ if len(ytd_dates) > 1:
 
 else:
 
-    ytd_start_date = None
     ytd_start_close = None
     ytd_return = None
 
@@ -488,7 +452,7 @@ def yearly_return(years):
         day
     )
 
-    old_date, old_close = nearest_on_or_before(
+    _, old_close = nearest_on_or_before(
         return_data,
         target
     )
@@ -502,131 +466,6 @@ def yearly_return(years):
 ret_1y = yearly_return(1)
 ret_3y = yearly_return(3)
 ret_5y = yearly_return(5)
-ret_10y = yearly_return(10)
-ret_15y = yearly_return(15)
-
-
-# ============================================================
-# TREND CLASSIFICATION
-# ============================================================
-
-def short_trend(values):
-
-    valid = [
-        x for x in values
-        if x is not None
-    ]
-
-    negatives = sum(
-        x < 0 for x in valid
-    )
-
-    positives = sum(
-        x > 0 for x in valid
-    )
-
-    if negatives >= 2 and positives == 0:
-        return "BEARISH MOMENTUM"
-
-    if positives >= 2 and negatives == 0:
-        return "BULLISH MOMENTUM"
-
-    return "MIXED"
-
-
-def medium_long_trend(values):
-
-    valid = [
-        x for x in values
-        if x is not None
-    ]
-
-    negatives = sum(
-        x < 0 for x in valid
-    )
-
-    positives = sum(
-        x > 0 for x in valid
-    )
-
-    if negatives >= 4 and positives == 0:
-        return "STRONG BEARISH"
-
-    if negatives >= 3 and positives <= 1:
-        return "BEARISH"
-
-    if positives >= 4 and negatives == 0:
-        return "STRONG BULLISH"
-
-    if positives >= 3 and negatives <= 1:
-        return "BULLISH"
-
-    return "MIXED"
-
-
-short_trend = short_trend([
-    ret_5d,
-    ret_10d
-])
-
-medium_trend = medium_long_trend([
-    ret_1m,
-    ret_3m,
-    ret_45m,
-    ret_6m,
-    ret_9m
-])
-
-long_trend = medium_long_trend([
-    ret_1y,
-    ret_3y,
-    ret_5y,
-    ret_10y,
-    ret_15y
-])
-
-# ============================================================
-# OVERALL ACTION
-# ============================================================
-
-bearish_count = sum([
-    short_trend == "BEARISH MOMENTUM",
-    medium_trend in ["STRONG BEARISH", "BEARISH"],
-    long_trend in ["STRONG BEARISH", "BEARISH"]
-])
-
-bullish_count = sum([
-    short_trend == "BULLISH MOMENTUM",
-    medium_trend in ["STRONG BULLISH", "BULLISH"],
-    long_trend in ["STRONG BULLISH", "BULLISH"]
-])
-
-if bearish_count >= 2 and bullish_count == 0:
-
-    if (
-        short_trend == "BEARISH MOMENTUM"
-        and medium_trend == "STRONG BEARISH"
-    ):
-        action = "WAIT - STRONG DOWNTREND"
-    else:
-        action = "WAIT - DOWNTREND"
-
-elif bullish_count >= 2 and bearish_count == 0:
-
-    action = "ACCUMULATE - UPTREND"
-
-elif bullish_count > bearish_count:
-
-    action = "CAUTIOUS ACCUMULATION"
-
-elif bearish_count > bullish_count:
-
-    action = "CAUTION - BEARISH BIAS"
-
-else:
-
-    action = "MIXED - WAIT"
-
 from_low = trunc_pct(
     ltp,
     low_52
