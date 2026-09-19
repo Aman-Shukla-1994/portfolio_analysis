@@ -152,7 +152,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-
 # ============================================================
 # YAHOO DOWNLOAD FUNCTION
 # ============================================================
@@ -168,7 +167,6 @@ download_yahoo() {
         "$url" \
         -o "$output"
 }
-
 
 # ============================================================
 # LONG HISTORY
@@ -189,7 +187,6 @@ if [ ! -s "$TMP_LONG" ]; then
     echo "ERROR: Yahoo returned empty historical data."
     exit 1
 fi
-
 
 # ============================================================
 # RECENT HISTORY
@@ -213,7 +210,7 @@ if ! curl -L -sS \
     "$NSE_URL" \
     -o "$TMP_NSE"; then
     echo
-    echo "WARNING: NSE allIndices fetch failed. Sector PE/PB will be unavailable."
+    echo "WARNING: NSE allIndices fetch failed. Index PE/PB will be unavailable."
     echo
     echo '{}' > "$TMP_NSE"
 fi
@@ -399,6 +396,22 @@ if not completed:
 
 ref_date = completed[-1]
 ref_close = data[ref_date]
+
+ltp = ref_close
+ltp_date = ref_date
+market_price = meta_recent.get("regularMarketPrice")
+market_timestamp = meta_recent.get("regularMarketTime")
+if market_price is not None:
+    try:
+        ltp = float(market_price)
+        if market_timestamp is not None:
+            ltp_date = datetime.datetime.fromtimestamp(
+                market_timestamp,
+                IST
+            ).date()
+    except (TypeError, ValueError, OverflowError):
+        ltp = ref_close
+        ltp_date = ref_date
 
 age = (today - ref_date).days
 
@@ -832,107 +845,7 @@ INDEX_SECTOR_MAP = {
     "INDIA VIX": "Volatility"
 }
 
-import urllib.request
-import urllib.error
-
-# ── 1. TickerTape: stock-level PE, PB, and DivYield (primary) ──
-try:
-    ticker = YAHOO.replace('.NS', '').replace('.BO', '')
-    tt_search_url = f"https://api.tickertape.in/search?text={ticker}"
-    req_tt1 = urllib.request.Request(tt_search_url, headers={'User-Agent': 'Mozilla/5.0'})
-    resp_tt1 = urllib.request.urlopen(req_tt1, timeout=5)
-    tt_search_data = json.loads(resp_tt1.read().decode('utf-8'))
-    stocks = tt_search_data.get("data", {}).get("stocks", [])
-    sid = None
-    for s in stocks:
-        if s.get("ticker") == ticker:
-            sid = s.get("sid")
-            break
-    if not sid and stocks:
-        sid = stocks[0].get("sid")
-
-    if sid:
-        tt_info_url = f"https://api.tickertape.in/stocks/info/{sid}"
-        req_tt2 = urllib.request.Request(tt_info_url, headers={'User-Agent': 'Mozilla/5.0'})
-        resp_tt2 = urllib.request.urlopen(req_tt2, timeout=5)
-        tt_info = json.loads(resp_tt2.read().decode('utf-8'))
-        ratios  = tt_info.get("data", {}).get("ratios", {})
-        tt_info_data = tt_info.get("data", {}).get("info", {})
-
-        tt_sector = tt_info.get("data", {}).get("gic", {}).get("sector", "")
-        if tt_sector:
-            fund_data["sector"] = tt_sector
-
-        mc_val = ratios.get("marketCap")       # in Crores
-        if mc_val:
-            fund_data["marketCap"] = f"{mc_val:,.0f} Cr"
-            if mc_val > 80000:
-                fund_data["marketCapType"] = "Large Cap"
-            elif mc_val > 25000:
-                fund_data["marketCapType"] = "Mid Cap"
-            else:
-                fund_data["marketCapType"] = "Small Cap"
-
-        pe_val = ratios.get("pe")
-        if pe_val:
-            fund_data["peRatio"] = f"{pe_val:.2f}"
-
-        pb_val = ratios.get("pb")
-        if pb_val:
-            fund_data["pbRatio"] = f"{pb_val:.2f}"
-
-        dy_val = ratios.get("divYield")
-        if dy_val is not None:
-            fund_data["divYield"] = f"{dy_val:.2f}%"
-
-except Exception:
-    # ── Fallback: Yahoo Finance ──
-    try:
-        req1 = urllib.request.Request('https://fc.yahoo.com/', headers={'User-Agent': 'Mozilla/5.0'})
-        cookie = ''
-        try:
-            urllib.request.urlopen(req1, timeout=5)
-        except urllib.error.HTTPError as e:
-            cookie = e.headers.get('Set-Cookie')
-
-        if cookie:
-            req2 = urllib.request.Request('https://query1.finance.yahoo.com/v1/test/getcrumb', headers={'User-Agent': 'Mozilla/5.0', 'Cookie': cookie})
-            crumb = urllib.request.urlopen(req2, timeout=5).read().decode('utf-8')
-
-            qs_url = f"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{YAHOO}?modules=summaryProfile,summaryDetail,financialData,defaultKeyStatistics&crumb={crumb}"
-            req3 = urllib.request.Request(qs_url, headers={'User-Agent': 'Mozilla/5.0', 'Cookie': cookie})
-            resp3 = urllib.request.urlopen(req3, timeout=10)
-            qs_data = json.loads(resp3.read().decode('utf-8'))
-
-            result = qs_data.get("quoteSummary", {}).get("result", [])
-            if result:
-                res = result[0]
-                fund_data["sector"] = res.get("summaryProfile", {}).get("sector", "N/A")
-
-                mc = res.get("summaryDetail", {}).get("marketCap", {})
-                mc_val = mc.get("raw")
-                if mc_val:
-                    fund_data["marketCap"] = f"{mc_val / 10000000:,.0f} Cr"
-                    if mc_val > 800000000000:
-                        fund_data["marketCapType"] = "Large Cap"
-                    elif mc_val > 250000000000:
-                        fund_data["marketCapType"] = "Mid Cap"
-                    else:
-                        fund_data["marketCapType"] = "Small Cap"
-
-                pe = res.get("summaryDetail", {}).get("trailingPE", {})
-                fund_data["peRatio"] = pe.get("fmt", "N/A")
-
-                pb = res.get("defaultKeyStatistics", {}).get("priceToBook", {})
-                fund_data["pbRatio"] = pb.get("fmt", "N/A")
-
-                dy = res.get("summaryDetail", {}).get("dividendYield", {})
-                fund_data["divYield"] = dy.get("fmt", "N/A")
-
-    except Exception:
-        pass
-
-# ── 2. NSE allIndices: official PE, PB, Div Yield, and index sector labels ──
+# ── NSE allIndices: official values for recognized indices ──
 SECTOR_INDEX_MAP = {
     "Technology":             "NIFTY IT",
     "Information Technology": "NIFTY IT",
@@ -977,14 +890,6 @@ if nse_index:
         except ValueError:
             pass
 
-# Sector-level PE/PB/dividend fields removed intentionally. The dashboard and output now
-# use only the direct stock-level values from Tickertape or Yahoo fallback.
-#
-# NSE does expose index-level PE/PB/dividend values via its allIndices feed, but for
-# individual stocks there is no reliable official direct PE/PB source on the NSE website.
-# Hence the script prefers Tickertape for stock-level ratios and only uses the NSE
-# allIndices values for index mode when those official fields are available.
-
 # ============================================================
 # OUTPUT
 # ============================================================
@@ -995,8 +900,8 @@ if nse_index:
 else:
     print("        STOCK DETAILS & FUNDAMENTALS")
 print("=================================================")
-print(f"LTP             : Rs. {ref_close:.2f}")
-print(f"LTP date        : {ref_date}")
+print(f"LTP             : Rs. {ltp:.2f}")
+print(f"LTP date        : {ltp_date}")
 print(f"Mode            : {'INDEX' if nse_index else 'STOCK'}")
 print(f"Sector          : {fund_data['sector']}")
 print(f"MarketType      : {fund_data['marketCapType']}")
