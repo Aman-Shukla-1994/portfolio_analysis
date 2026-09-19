@@ -225,6 +225,7 @@ import sys
 import json
 import datetime
 import calendar
+import math
 
 long_file = sys.argv[1]
 recent_file = sys.argv[2]
@@ -413,6 +414,10 @@ if market_price is not None:
         ltp = ref_close
         ltp_date = ref_date
 
+return_data = dict(data)
+if ltp_date >= ref_date:
+    return_data[ltp_date] = ltp
+
 age = (today - ref_date).days
 
 if age > 7:
@@ -478,17 +483,17 @@ if nse_index:
 # SHORT TERM
 # ============================================================
 
-ret_5d = trading_return(
-    data,
-    ref_date,
-    ref_close,
-    5
+one_week_target = ltp_date - datetime.timedelta(days=7)
+one_week_date, one_week_close = nearest_on_or_before(
+    return_data,
+    one_week_target
 )
+ret_5d = return_pct(ltp, one_week_close)
 
 ret_10d = trading_return(
-    data,
-    ref_date,
-    ref_close,
+    return_data,
+    ltp_date,
+    ltp,
     10
 )
 
@@ -499,8 +504,8 @@ ret_10d = trading_return(
 
 def calendar_return(months=0, extra_days=0):
 
-    month = ref_date.month - months
-    year = ref_date.year
+    month = ltp_date.month - months
+    year = ltp_date.year
 
     while month <= 0:
 
@@ -508,7 +513,7 @@ def calendar_return(months=0, extra_days=0):
         year -= 1
 
     day = min(
-        ref_date.day,
+        ltp_date.day,
         calendar.monthrange(year, month)[1]
     )
 
@@ -523,12 +528,12 @@ def calendar_return(months=0, extra_days=0):
     )
 
     old_date, old_close = nearest_on_or_before(
-        data,
+        return_data,
         target
     )
 
     return return_pct(
-        ref_close,
+        ltp,
         old_close
     )
 
@@ -558,8 +563,8 @@ year_start = datetime.date(
 )
 
 ytd_dates = sorted(
-    d for d in data
-    if year_start <= d <= ref_date
+    d for d in return_data
+    if year_start <= d <= ltp_date
 )
 
 if ytd_dates:
@@ -568,7 +573,7 @@ if ytd_dates:
     ytd_start_close = data[ytd_start_date]
 
     ytd_return = return_pct(
-        ref_close,
+        ltp,
         ytd_start_close
     )
 
@@ -586,12 +591,12 @@ else:
 def yearly_return(years):
 
     months = round(years * 12)
-    target_month_index = ref_date.year * 12 + ref_date.month - 1 - months
+    target_month_index = ltp_date.year * 12 + ltp_date.month - 1 - months
     year, month_index = divmod(target_month_index, 12)
     month = month_index + 1
 
     day = min(
-        ref_date.day,
+        ltp_date.day,
         calendar.monthrange(
             year,
             month
@@ -605,12 +610,12 @@ def yearly_return(years):
     )
 
     old_date, old_close = nearest_on_or_before(
-        data,
+        return_data,
         target
     )
 
     return return_pct(
-        ref_close,
+        ltp,
         old_close
     )
 
@@ -799,14 +804,11 @@ sell_zone_low = strong_resistance
 sell_zone_high = resistance_zone_high
 
 from_low = return_pct(
-    ref_close,
+    ltp,
     low_52
 )
 
-from_high = return_pct(
-    ref_close,
-    high_52
-)
+from_high = math.trunc((ltp - high_52) / high_52 * 100 * 100) / 100
 
 # ============================================================
 # FETCH FUNDAMENTALS
