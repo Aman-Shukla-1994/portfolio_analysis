@@ -9,13 +9,8 @@ on:
         required: true
         type: choice
         options:
-          - bseEQETF
-          - nseEQETF
           - dividendStocks
           - etfs
-          - globalIndices
-          - gold
-          - silver
           - holdings
           - indices
           - ipo
