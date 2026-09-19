@@ -31,7 +31,7 @@ resolve_watchlist() {
 WATCHLIST="$(resolve_watchlist "$1")"
 OUTPUT_CSV="${2:-}"
 if [ -z "$WATCHLIST" ]; then
-    echo "Usage: $0 <filename> [output.csv]"
+    echo "Usage: $0 <filename> [output.xlsx]"
     exit 1
 fi
 
@@ -68,7 +68,7 @@ colorize_return() {
     fi
 }
 
-printf '%-12s %-8s %-18s %-15s %-8s %-8s %-8s %-18s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n' \
+printf '%-12s %-10s %-20s %-12s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-10s %-8s %-12s\n' \
     "SYMBOL" "LTP" "Sector" "MarketType" "PE" "PB" "DivYield" "1W" "1M" "3M" "6M" "YTD" "1Y" "3Y" "5Y" "52WH" "%-chg" "52WHDate"
 echo "-----------------------------------------------------------------------------------------------------------------------------------"
 
@@ -81,7 +81,7 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     bash "$SCRIPT_DIR/stock.sh" "$line" > "$TMP_OUTPUT" 2>&1 || true
 
     symbol="$line"
-    ltp=$(grep '^LTP[[:space:]]*:[[:space:]]*Rs\.' "$TMP_OUTPUT" | head -n 1 | sed -E 's/.*Rs\. ([0-9,]+(\.[0-9]+)?).*/\1/' | tr -d ',')
+    ltp=$(grep '^LTP[[:space:]]*:[[:space:]]*Rs\.' "$TMP_OUTPUT" | head -n 1 | sed -E 's/.*Rs\.[[:space:]]*([0-9,]+(\.[0-9]+)?).*/\1/' | tr -d ',\r[:space:]')
     sector=$(grep '^Sector[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^Sector[[:space:]]*:[[:space:]]*(.*)$/\1/')
     market_cap_type=$(grep '^MarketType[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^MarketType[[:space:]]*:[[:space:]]*(.*)$/\1/')
     pe=$(grep '^PE[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^PE[[:space:]]*:[[:space:]]*(.*)$/\1/')
@@ -117,11 +117,11 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     : "${from_high:=N/A}"
     : "${high_date:=N/A}"
 
-    printf '%-12s %-8s %-18s %-15s %-8s %-8s %-8s %-18s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n' \
+    printf '%-12s %-10s %-20s %-12s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-10s %-8s %-12s\n' \
         "$symbol" "$ltp" "$sector" "$market_cap_type" "$pe" "$pb" "$div_yield" "$(colorize_return "$w1")" "$(colorize_return "$m1")" "$(colorize_return "$m3")" "$(colorize_return "$m6")" "$(colorize_return "$ytd")" "$(colorize_return "$y1")" "$(colorize_return "$y3")" "$(colorize_return "$y5")" "$(colorize_return "$high")" "$(colorize_return "$from_high")" "$(colorize_return "$high_date")"
 
     if [ -n "$OUTPUT_CSV" ]; then
-        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
             "$symbol" \
             "$ltp" \
             "$sector" \
@@ -175,16 +175,26 @@ if [ -n "$OUTPUT_CSV" ]; then
             '    idx + 1 for idx, name in enumerate(header) if name in {"1W", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "%-chg"}' \
             '}' \
             '' \
+            'numeric_columns = {"LTP", "PE", "PB", "DivYield", "1W", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "52WH", "%-chg"}' \
+            '' \
             'for row_index, row in enumerate(rows, start=1):' \
             '    for col_index, value in enumerate(row, start=1):' \
-            '        cell = ws.cell(row=row_index, column=col_index, value=value)' \
-            '        if row_index == 1 or col_index not in return_columns:' \
-            '            continue' \
-            '        if not value:' \
-            '            continue' \
-            '        try:' \
-            '            numeric = float(value.replace("%", "").replace(",", "").replace("+", ""))' \
-            '        except ValueError:' \
+            '        column_name = header[col_index - 1] if col_index <= len(header) else ""' \
+            '        cell_value = value' \
+            '        numeric = None' \
+            '        if row_index > 1 and column_name in numeric_columns and value not in {"", "N/A"}:' \
+            '            try:' \
+            '                numeric = float(value.replace("%", "").replace(",", "").replace("+", ""))' \
+            '                cell_value = numeric' \
+            '            except ValueError:' \
+            '                pass' \
+            '        cell = ws.cell(row=row_index, column=col_index, value=cell_value)' \
+            '        if numeric is not None:' \
+            '            if column_name in {"DivYield", "1W", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "%-chg"}:' \
+            '                cell.number_format = "0.00\"%\""' \
+            '            else:' \
+            '                cell.number_format = "0.00"' \
+            '        if row_index == 1 or col_index not in return_columns or numeric is None:' \
             '            continue' \
             '        if numeric < 0:' \
             '            cell.fill = red_fill' \

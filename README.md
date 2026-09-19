@@ -61,7 +61,6 @@ Available watchlists include:
 - `watchlists/ipo`
 - `watchlists/dividendStocks`
 - `watchlists/etfs`
-- `watchlists/globalIndices`
 
 To use another watchlist:
 
@@ -179,7 +178,7 @@ The local `.env` file is ignored and is not uploaded to GitHub Actions. Configur
 - `scripts/index_dashboard.sh` - resolves index aliases and downloads index constituents for the batch dashboard.
 - `watchlists/holdings` - default stock watchlist.
 - `watchlists/indices` - index/watchlist aliases.
-- `watchlists/dividendStocks`, `watchlists/etfs`, `watchlists/globalIndices`, and `watchlists/ipo` - additional selectable watchlists.
+- `watchlists/dividendStocks`, `watchlists/etfs`, and `watchlists/ipo` - additional selectable watchlists.
 - `.github/copilot-instructions.md` - repository-specific guidance for Copilot sessions.
 
 The dashboard uses temporary files for intermediate output and does not create generated files in the repository.
