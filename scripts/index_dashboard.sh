@@ -21,6 +21,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
+run_watchlist() {
+    if [ $# -eq 2 ]; then
+        bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE" "$2"
+    else
+        bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"
+    fi
+}
+
 # Keep the supported aliases in one place and reuse the repo watchlist as the source of truth.
 # Canonical names use the nifty-prefix convention; legacy short names are still accepted for compatibility.
 declare -A INDEX_ALIASES=(
@@ -98,11 +106,7 @@ fi
 # Try to use a dedicated watchlist file if one already exists for this alias.
 if [ -f "$REPO_ROOT/watchlists/${INDEX_ALIAS}" ]; then
     cp "$REPO_ROOT/watchlists/${INDEX_ALIAS}" "$TMP_INDEX_FILE"
-    if [ $# -eq 2 ]; then
-        bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE" "$2"
-    else
-        bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"
-    fi
+    run_watchlist "$@"
     exit 0
 fi
 
@@ -144,8 +148,4 @@ if [ ! -s "$TMP_INDEX_FILE" ]; then
     exit 1
 fi
 
-if [ $# -eq 2 ]; then
-    bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE" "$2"
-else
-    bash "$SCRIPT_DIR/watchlist.sh" "$TMP_INDEX_FILE"
-fi
+run_watchlist "$@"

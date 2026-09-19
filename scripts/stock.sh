@@ -146,10 +146,9 @@ fi
 TMP_LONG=$(mktemp)
 TMP_RECENT=$(mktemp)
 TMP_NSE=$(mktemp)
-TMP_NSE_HISTORY=$(mktemp)
 
 cleanup() {
-    rm -f "$TMP_LONG" "$TMP_RECENT" "$TMP_NSE" "$TMP_NSE_HISTORY"
+    rm -f "$TMP_LONG" "$TMP_RECENT" "$TMP_NSE"
 }
 trap cleanup EXIT
 
@@ -219,33 +218,11 @@ if ! curl -L -sS \
     echo '{}' > "$TMP_NSE"
 fi
 
-if [ "${NSE_ETF_HISTORY:-0}" = "1" ]; then
-    read -r NSE_FROM NSE_TO <<< "$(python3 - <<'PY'
-import datetime
-
-today = datetime.date.today()
-print((today - datetime.timedelta(days=3650)).strftime('%d-%m-%Y'), today.strftime('%d-%m-%Y'))
-PY
-)"
-    NSE_HISTORY_URL="https://www.nseindia.com/api/historical/cm/equity?symbol=${SYMBOL}&series=%5B%22EQ%22%5D&from=${NSE_FROM}&to=${NSE_TO}"
-    if ! curl -L -sS \
-        --connect-timeout 15 \
-        --max-time 60 \
-        -A "Mozilla/5.0" \
-        -e "https://www.nseindia.com/get-quotes/equity?symbol=${SYMBOL}" \
-        "$NSE_HISTORY_URL" \
-        -o "$TMP_NSE_HISTORY"; then
-        echo '{}' > "$TMP_NSE_HISTORY"
-    fi
-else
-    echo '{}' > "$TMP_NSE_HISTORY"
-fi
-
 # ============================================================
 # PYTHON CALCULATIONS
 # ============================================================
 
-python3 - "$TMP_LONG" "$TMP_RECENT" "$TMP_NSE" "$TMP_NSE_HISTORY" "$SYMBOL" "$NSE_INDEX" "$YAHOO" <<'PY'
+python3 - "$TMP_LONG" "$TMP_RECENT" "$TMP_NSE" "$SYMBOL" "$NSE_INDEX" "$YAHOO" <<'PY'
 
 import sys
 import json
@@ -255,10 +232,9 @@ import calendar
 long_file = sys.argv[1]
 recent_file = sys.argv[2]
 nse_file = sys.argv[3]
-nse_history_file = sys.argv[4]
-SYMBOL = sys.argv[5]
-NSE_INDEX = sys.argv[6]
-YAHOO = sys.argv[7]
+SYMBOL = sys.argv[4]
+NSE_INDEX = sys.argv[5]
+YAHOO = sys.argv[6]
 
 # India timezone without requiring tzdata
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
@@ -385,35 +361,6 @@ def trading_return(data, reference_date, reference_close, sessions):
 long_close, long_high, long_low, meta_long = load_yahoo(long_file)
 recent_close, recent_high, recent_low, meta_recent = load_yahoo(recent_file)
 
-def load_nse_history(filename):
-    try:
-        with open(filename, "r") as f:
-            rows = json.load(f).get("data", [])
-    except Exception:
-        return {}, {}, {}
-
-    closes = {}
-    highs = {}
-    lows = {}
-    for row in rows:
-        timestamp = row.get("CH_TIMESTAMP") or row.get("mTIMESTAMP")
-        try:
-            date = datetime.datetime.strptime(
-                timestamp,
-                "%d-%b-%Y"
-            ).date()
-            close = float(row["CH_CLOSING_PRICE"])
-            closes[date] = close
-            if row.get("CH_TRADE_HIGH_PRICE") not in (None, ""):
-                highs[date] = float(row["CH_TRADE_HIGH_PRICE"])
-            if row.get("CH_TRADE_LOW_PRICE") not in (None, ""):
-                lows[date] = float(row["CH_TRADE_LOW_PRICE"])
-        except (KeyError, TypeError, ValueError):
-            continue
-    return closes, highs, lows
-
-nse_close, nse_high, nse_low = load_nse_history(nse_history_file)
-
 try:
     with open(nse_file, "r") as f:
         nse_data = json.load(f).get("data", [])
@@ -427,15 +374,12 @@ nse_index = next(
 
 data = dict(long_close)
 data.update(recent_close)
-data.update(nse_close)
 
 high_data = dict(long_high)
 high_data.update(recent_high)
-high_data.update(nse_high)
 
 low_data = dict(long_low)
 low_data.update(recent_low)
-low_data.update(nse_low)
 
 completed = sorted(
     d for d in data
