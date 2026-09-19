@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       symbols:
-        description: Comma-separated stock or index symbols, for example RELIANCE, TCS, NIFTY
+        description: Comma-separated stock symbols, for example RELIANCE, TCS, HDFCBANK
         required: true
         type: string
 

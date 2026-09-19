@@ -42,7 +42,7 @@ trap 'rm -f "$TMP_OUTPUT" "$TMP_CSV" "$TMP_PY"' EXIT
 
 if [ -n "$OUTPUT_CSV" ]; then
     mkdir -p "$(dirname "$OUTPUT_CSV")" 2>/dev/null || true
-    printf '%s\n' 'SYMBOL,LTP,Sector,MarketType,PE,PB,DivYield,1W,1M,3M,6M,YTD,1Y,3Y,5Y,52WH,%-chg,52WHDate' > "$TMP_CSV"
+    printf '%s\n' 'SYMBOL,LTP,1W,1M,3M,6M,YTD,1Y,3Y,5Y,52WH,%-chg,52WHDate' > "$TMP_CSV"
 fi
 
 colorize_return() {
@@ -68,9 +68,9 @@ colorize_return() {
     fi
 }
 
-printf '%-12s %-10s %-20s %-12s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-10s %-8s %-12s\n' \
-    "SYMBOL" "LTP" "Sector" "MarketType" "PE" "PB" "DivYield" "1W" "1M" "3M" "6M" "YTD" "1Y" "3Y" "5Y" "52WH" "%-chg" "52WHDate"
-echo "-----------------------------------------------------------------------------------------------------------------------------------"
+printf '%-12s %-10s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-10s %-8s %-12s\n' \
+    "SYMBOL" "LTP" "1W" "1M" "3M" "6M" "YTD" "1Y" "3Y" "5Y" "52WH" "%-chg" "52WHDate"
+echo "---------------------------------------------------------------------------------------------------------------"
 
 while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     line=$(echo "$raw_line" | tr -d '\r')
@@ -82,11 +82,6 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
 
     symbol="$line"
     ltp=$(grep '^LTP[[:space:]]*:[[:space:]]*Rs\.' "$TMP_OUTPUT" | head -n 1 | sed -E 's/.*Rs\.[[:space:]]*([0-9,]+(\.[0-9]+)?).*/\1/' | tr -d ',\r[:space:]')
-    sector=$(grep '^Sector[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^Sector[[:space:]]*:[[:space:]]*(.*)$/\1/')
-    market_cap_type=$(grep '^MarketType[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^MarketType[[:space:]]*:[[:space:]]*(.*)$/\1/')
-    pe=$(grep '^PE[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^PE[[:space:]]*:[[:space:]]*(.*)$/\1/')
-    pb=$(grep '^PB[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^PB[[:space:]]*:[[:space:]]*(.*)$/\1/')
-    div_yield=$(grep '^DivYield[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^DivYield[[:space:]]*:[[:space:]]*(.*)$/\1/')
     w1=$(grep '^1W Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^1W Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
     m1=$(grep '^1M Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^1M Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
     m3=$(grep '^3M Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^3M Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
@@ -100,11 +95,6 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     high_date=$(grep '^52WH Date[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^52WH Date[[:space:]]*:[[:space:]]*(.*)$/\1/')
 
     : "${ltp:=N/A}"
-    : "${sector:=N/A}"
-    : "${market_cap_type:=N/A}"
-    : "${pe:=N/A}"
-    : "${pb:=N/A}"
-    : "${div_yield:=N/A}"
     : "${w1:=N/A}"
     : "${m1:=N/A}"
     : "${m3:=N/A}"
@@ -117,18 +107,13 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     : "${from_high:=N/A}"
     : "${high_date:=N/A}"
 
-    printf '%-12s %-10s %-20s %-12s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-10s %-8s %-12s\n' \
-        "$symbol" "$ltp" "$sector" "$market_cap_type" "$pe" "$pb" "$div_yield" "$(colorize_return "$w1")" "$(colorize_return "$m1")" "$(colorize_return "$m3")" "$(colorize_return "$m6")" "$(colorize_return "$ytd")" "$(colorize_return "$y1")" "$(colorize_return "$y3")" "$(colorize_return "$y5")" "$(colorize_return "$high")" "$(colorize_return "$from_high")" "$(colorize_return "$high_date")"
+    printf '%-12s %-10s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-10s %-8s %-12s\n' \
+        "$symbol" "$ltp" "$(colorize_return "$w1")" "$(colorize_return "$m1")" "$(colorize_return "$m3")" "$(colorize_return "$m6")" "$(colorize_return "$ytd")" "$(colorize_return "$y1")" "$(colorize_return "$y3")" "$(colorize_return "$y5")" "$(colorize_return "$high")" "$(colorize_return "$from_high")" "$(colorize_return "$high_date")"
 
     if [ -n "$OUTPUT_CSV" ]; then
-        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
             "$symbol" \
             "$ltp" \
-            "$sector" \
-            "$market_cap_type" \
-            "$pe" \
-            "$pb" \
-            "$div_yield" \
             "$w1" \
             "$m1" \
             "$m3" \
@@ -175,7 +160,7 @@ if [ -n "$OUTPUT_CSV" ]; then
             '    idx + 1 for idx, name in enumerate(header) if name in {"1W", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "%-chg"}' \
             '}' \
             '' \
-            'numeric_columns = {"LTP", "PE", "PB", "DivYield", "1W", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "52WH", "%-chg"}' \
+            'numeric_columns = {"LTP", "1W", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "52WH", "%-chg"}' \
             '' \
             'for row_index, row in enumerate(rows, start=1):' \
             '    for col_index, value in enumerate(row, start=1):' \
@@ -190,7 +175,7 @@ if [ -n "$OUTPUT_CSV" ]; then
             '                pass' \
             '        cell = ws.cell(row=row_index, column=col_index, value=cell_value)' \
             '        if numeric is not None:' \
-            '            if column_name in {"DivYield", "1W", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "%-chg"}:' \
+            '            if column_name in {"1W", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "%-chg"}:' \
             '                cell.number_format = "0.00\"%\""' \
             '            else:' \
             '                cell.number_format = "0.00"' \
