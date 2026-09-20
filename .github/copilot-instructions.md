@@ -4,14 +4,14 @@
 
 This repository is a shell-based portfolio and stock-watchlist analysis tool. It has two executable entry points:
 
-- `scripts/stock.sh SYMBOL` is the single-symbol calculator. Bash validates and normalizes the symbol, maps known Indian indices to Yahoo Finance tickers, downloads 10 years plus a recent 10-day window of daily chart data, and passes the temporary JSON files to an embedded Python 3 program.
+- `scripts/stock.sh SYMBOL` is the single-symbol calculator. Bash validates and normalizes the symbol, resolves it to a Yahoo Finance ticker, downloads 10 years plus a recent 10-day window of daily chart data, and passes the temporary JSON files to an embedded Python 3 program.
 - `scripts/watchlist.sh holdings` is the batch dashboard. It reads one symbol per line, invokes `stock.sh` for each symbol, extracts values from the calculator's human-readable output, and renders a colorized table.
 
 The data files are inputs rather than application code:
 
 - `holdings` contains stock symbols to process in the dashboard.
 
-The Python section inside `stock.sh` merges the long and recent Yahoo responses, selects the latest completed trading day, rejects stale or insufficient data, calculates short-, medium-, and long-term returns, classifies trends, derives an overall action, and computes T0-T4 tranche levels from the 52-week intraday low/high.
+The Python section inside `stock.sh` merges the long and recent Yahoo responses, selects the latest completed trading day, rejects stale or insufficient data, calculates return periods, and computes the 52-week intraday high/low range.
 
 ## Commands
 
@@ -41,12 +41,11 @@ There is no isolated unit-test command because the calculation logic is embedded
 ## Implementation conventions
 
 - Treat the labels and spacing printed by `stock.sh` as an interface. `watchlist.sh` parses exact labels such as `ACTION`, `1W Return`, `From 52W High`, and `YTD Return`; changing them requires updating the parser in the same change.
-- Normalize user symbols to uppercase before mapping. Add aliases in the ordered mapping block near the top of `stock.sh`; preserve the canonical display name separately from the Yahoo ticker.
+- Normalize user symbols to uppercase before resolving them to a Yahoo ticker.
 - Unknown symbols default to `<SYMBOL>.NS`; symbols containing `.` or beginning with `^` use the manual fallback path. Keep URL encoding behavior compatible with Yahoo's chart endpoint.
 - The calculator deliberately uses daily bars, merges the 10-day refresh over the long history, and converts Yahoo timestamps to India Standard Time before grouping by date. Preserve this timezone and merge behavior when changing date calculations.
 - Missing or stale market data is an error, not a zero-valued result. The batch script keeps failed symbols visible in the dashboard instead of silently dropping them.
 - Use temporary files with `mktemp` and retain the existing `trap` cleanup pattern. Do not leave downloaded JSON or intermediate dashboard files in the repository.
-- Trend/action strings are consumed by humans and by the calculator output. If an action or trend label changes, update the corresponding output consumers in the same change.
 - Dashboard rows are emitted as a fixed-width console table and an optional CSV/XLSX export. Keep symbol inputs free of commas and update field extraction consistently if the output shape changes.
 - Preserve the existing Bash style: quote variables used as paths or command arguments, use explicit nonzero exits for invalid input/data failures, and avoid broad silent fallbacks. The recent-data request is the one intentional fallback: it warns and continues with long history.
 - Input watchlists should remain one symbol per line, with blank lines tolerated by `watchlist.sh`.

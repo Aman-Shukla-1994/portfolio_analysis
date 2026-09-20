@@ -65,11 +65,11 @@ For each stock symbol, `stock.sh` reports:
 
 - The latest available market price and quote date
 - The percentage distance of the current close above the 52-week low and below the 52-week high
-- Absolute return rows for 1W, 1M, 3M, 6M, YTD, 1Y, 3Y, and 5Y
+- Absolute return rows for 1W, 1M, 3M, 6M, YTD, 1Y, 2Y, 3Y, and 5Y
 - The 52-week range block for the current symbol
 - The console output is designed for compact dashboard parsing
 
-The calculator downloads a 10-year daily history and overlays a recent 10-day download so the latest available sessions are refreshed. Data is converted to India Standard Time before trading dates are selected. Stock symbols and watchlists use Yahoo history for returns; index-specific return overrides are not used.
+The calculator uses NSE's last traded price when available, with Yahoo's current quote as fallback. It downloads a 10-year daily history and overlays a recent 10-day download so the latest available sessions are refreshed. Data is converted to India Standard Time before trading dates are selected. Yahoo history supplies the historical return baselines.
 
 ## Development checks
 
