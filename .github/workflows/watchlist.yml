@@ -13,7 +13,8 @@ on:
           - etfs
           - holdings
           - ipo
-          - pharma
+          - it
+          - rail
       send_email:
         description: Whether to send an email with the watchlist dashboard XLSX attached
         required: false
