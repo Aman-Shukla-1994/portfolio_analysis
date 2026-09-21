@@ -9,12 +9,16 @@ on:
         required: true
         type: choice
         options:
+          - capmkt
           - dividendStocks
           - etfs
           - holdings
           - ipo
           - it
+          - metal
+          - mshealthcare
           - pharma
+          - psubank
           - rail
       send_email:
         description: Whether to send an email with the watchlist dashboard XLSX attached
