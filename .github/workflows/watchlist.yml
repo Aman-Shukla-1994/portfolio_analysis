@@ -14,6 +14,7 @@ on:
           - holdings
           - ipo
           - it
+          - pharma
           - rail
       send_email:
         description: Whether to send an email with the watchlist dashboard XLSX attached

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================
-# STOCK TRANCHE CALCULATOR
+# STOCK CALCULATOR
 # Usage: ./stock.sh SYMBOL
 # Example: ./stock.sh BSE
 #          ./stock.sh RPPINFRA
@@ -54,9 +54,11 @@ fi
 
 TMP_LONG=$(mktemp)
 TMP_RECENT=$(mktemp)
+TMP_NSE_QUOTE=$(mktemp)
+TMP_NSE_COOKIE=$(mktemp)
 
 cleanup() {
-    rm -f "$TMP_LONG" "$TMP_RECENT"
+    rm -f "$TMP_LONG" "$TMP_RECENT" "$TMP_NSE_QUOTE" "$TMP_NSE_COOKIE"
 }
 trap cleanup EXIT
 
@@ -110,11 +112,30 @@ if ! download_yahoo "$RECENT_URL" "$TMP_RECENT"; then
     echo '{}' > "$TMP_RECENT"
 fi
 
+NSE_QUOTE_URL="https://www.nseindia.com/api/quote-equity?symbol=${SYMBOL}"
+curl -L -sS \
+    --connect-timeout 15 \
+    --max-time 30 \
+    -A "Mozilla/5.0" \
+    -c "$TMP_NSE_COOKIE" \
+    -o /dev/null \
+    "https://www.nseindia.com/" || true
+if ! curl -L -sS \
+    --connect-timeout 15 \
+    --max-time 30 \
+    -A "Mozilla/5.0" \
+    -e "https://www.nseindia.com/" \
+    -b "$TMP_NSE_COOKIE" \
+    "$NSE_QUOTE_URL" \
+    -o "$TMP_NSE_QUOTE"; then
+    echo '{}' > "$TMP_NSE_QUOTE"
+fi
+
 # ============================================================
 # PYTHON CALCULATIONS
 # ============================================================
 
-python3 - "$TMP_LONG" "$TMP_RECENT" <<'PY'
+python3 - "$TMP_LONG" "$TMP_RECENT" "$TMP_NSE_QUOTE" <<'PY'
 
 import sys
 import json
@@ -124,6 +145,7 @@ import math
 
 long_file = sys.argv[1]
 recent_file = sys.argv[2]
+nse_quote_file = sys.argv[3]
 
 # India timezone without requiring tzdata
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
@@ -240,6 +262,12 @@ def nearest_on_or_before(data, target):
 long_close, long_high, long_low, _ = load_yahoo(long_file)
 recent_close, recent_high, recent_low, meta_recent = load_yahoo(recent_file)
 
+try:
+    with open(nse_quote_file, "r") as f:
+        nse_quote = json.load(f)
+except Exception:
+    nse_quote = {}
+
 data = dict(long_close)
 data.update(recent_close)
 
@@ -270,9 +298,23 @@ ref_close = data[ref_date]
 
 ltp = ref_close
 ltp_date = ref_date
+last_price = nse_quote.get("priceInfo", {}).get("lastPrice")
+last_price_date = nse_quote.get("metadata", {}).get("lastUpdateTime")
+if last_price is not None:
+    try:
+        ltp = float(last_price)
+        if last_price_date:
+            ltp_date = datetime.datetime.strptime(
+                last_price_date,
+                "%d-%b-%Y %H:%M:%S"
+            ).date()
+    except (TypeError, ValueError):
+        ltp = ref_close
+        ltp_date = ref_date
+
 market_price = meta_recent.get("regularMarketPrice")
 market_timestamp = meta_recent.get("regularMarketTime")
-if market_price is not None:
+if last_price is None and market_price is not None:
     try:
         ltp = float(market_price)
         if market_timestamp is not None:
@@ -354,7 +396,7 @@ ret_5d = return_pct(ltp, one_week_close)
 # CALENDAR RETURN
 # ============================================================
 
-def calendar_return(months=0, extra_days=0):
+def calendar_return(months):
 
     month = ltp_date.month - months
     year = ltp_date.year
@@ -373,10 +415,6 @@ def calendar_return(months=0, extra_days=0):
         year,
         month,
         day
-    )
-
-    target -= datetime.timedelta(
-        days=extra_days
     )
 
     _, old_close = nearest_on_or_before(
@@ -464,6 +502,7 @@ def yearly_return(years):
 
 
 ret_1y = yearly_return(1)
+ret_2y = yearly_return(2)
 ret_3y = yearly_return(3)
 ret_5y = yearly_return(5)
 from_low = trunc_pct(
@@ -495,6 +534,7 @@ print(f"3M Return       : {fmt_pct(ret_3m)}")
 print(f"6M Return       : {fmt_pct(ret_6m)}")
 print(f"YTD Return      : {fmt_pct(ytd_return)}")
 print(f"1Y Return       : {fmt_pct(ret_1y)}")
+print(f"2Y Return       : {fmt_pct(ret_2y)}")
 print(f"3Y Return       : {fmt_pct(ret_3y)}")
 print(f"5Y Return       : {fmt_pct(ret_5y)}")
 print()

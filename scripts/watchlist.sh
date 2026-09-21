@@ -42,7 +42,7 @@ trap 'rm -f "$TMP_OUTPUT" "$TMP_CSV" "$TMP_PY"' EXIT
 
 if [ -n "$OUTPUT_CSV" ]; then
     mkdir -p "$(dirname "$OUTPUT_CSV")" 2>/dev/null || true
-    printf '%s\n' 'SYMBOL,LTP,1W,1M,3M,6M,YTD,1Y,3Y,5Y,52WH,%-chg,52WHDate' > "$TMP_CSV"
+    printf '%s\n' 'SYMBOL,LTP,1W,1M,3M,6M,YTD,1Y,2Y,3Y,5Y,52WH,%-chg,52WHDate' > "$TMP_CSV"
 fi
 
 colorize_return() {
@@ -68,8 +68,8 @@ colorize_return() {
     fi
 }
 
-printf '%-12s %-10s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-10s %-8s %-12s\n' \
-    "SYMBOL" "LTP" "1W" "1M" "3M" "6M" "YTD" "1Y" "3Y" "5Y" "52WH" "%-chg" "52WHDate"
+printf '%-12s %-10s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-10s %-8s %-12s\n' \
+    "SYMBOL" "LTP" "1W" "1M" "3M" "6M" "YTD" "1Y" "2Y" "3Y" "5Y" "52WH" "%-chg" "52WHDate"
 echo "---------------------------------------------------------------------------------------------------------------"
 
 while IFS= read -r raw_line || [ -n "$raw_line" ]; do
@@ -88,6 +88,7 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     m6=$(grep '^6M Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^6M Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
     ytd=$(grep '^YTD Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^YTD Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
     y1=$(grep '^1Y Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^1Y Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
+    y2=$(grep '^2Y Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^2Y Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
     y3=$(grep '^3Y Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^3Y Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
     y5=$(grep '^5Y Return[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^5Y Return[[:space:]]*:[[:space:]]*(.*)$/\1/')
     high=$(grep '^52WH[[:space:]]*:' "$TMP_OUTPUT" | head -n 1 | sed -E 's/^52WH[[:space:]]*:[[:space:]]*Rs\. ([0-9,]+(\.[0-9]+)?).*/\1/' | tr -d ',')
@@ -107,11 +108,11 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
     : "${from_high:=N/A}"
     : "${high_date:=N/A}"
 
-    printf '%-12s %-10s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-10s %-8s %-12s\n' \
-        "$symbol" "$ltp" "$(colorize_return "$w1")" "$(colorize_return "$m1")" "$(colorize_return "$m3")" "$(colorize_return "$m6")" "$(colorize_return "$ytd")" "$(colorize_return "$y1")" "$(colorize_return "$y3")" "$(colorize_return "$y5")" "$(colorize_return "$high")" "$(colorize_return "$from_high")" "$(colorize_return "$high_date")"
+    printf '%-12s %-10s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-8s %-10s %-8s %-12s\n' \
+        "$symbol" "$ltp" "$(colorize_return "$w1")" "$(colorize_return "$m1")" "$(colorize_return "$m3")" "$(colorize_return "$m6")" "$(colorize_return "$ytd")" "$(colorize_return "$y1")" "$(colorize_return "$y2")" "$(colorize_return "$y3")" "$(colorize_return "$y5")" "$(colorize_return "$high")" "$(colorize_return "$from_high")" "$(colorize_return "$high_date")"
 
     if [ -n "$OUTPUT_CSV" ]; then
-        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
             "$symbol" \
             "$ltp" \
             "$w1" \
@@ -120,6 +121,7 @@ while IFS= read -r raw_line || [ -n "$raw_line" ]; do
             "$m6" \
             "$ytd" \
             "$y1" \
+            "$y2" \
             "$y3" \
             "$y5" \
             "$high" \
@@ -157,10 +159,10 @@ if [ -n "$OUTPUT_CSV" ]; then
             '' \
             'header = [cell.strip() for cell in rows[0]]' \
             'return_columns = {' \
-            '    idx + 1 for idx, name in enumerate(header) if name in {"1W", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "%-chg"}' \
+            '    idx + 1 for idx, name in enumerate(header) if name in {"1W", "1M", "3M", "6M", "YTD", "1Y", "2Y", "3Y", "5Y", "%-chg"}' \
             '}' \
             '' \
-            'numeric_columns = {"LTP", "1W", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "52WH", "%-chg"}' \
+            'numeric_columns = {"LTP", "1W", "1M", "3M", "6M", "YTD", "1Y", "2Y", "3Y", "5Y", "52WH", "%-chg"}' \
             '' \
             'for row_index, row in enumerate(rows, start=1):' \
             '    for col_index, value in enumerate(row, start=1):' \
@@ -175,7 +177,7 @@ if [ -n "$OUTPUT_CSV" ]; then
             '                pass' \
             '        cell = ws.cell(row=row_index, column=col_index, value=cell_value)' \
             '        if numeric is not None:' \
-            '            if column_name in {"1W", "1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "%-chg"}:' \
+            '            if column_name in {"1W", "1M", "3M", "6M", "YTD", "1Y", "2Y", "3Y", "5Y", "%-chg"}:' \
             '                cell.number_format = "0.00\"%\""' \
             '            else:' \
             '                cell.number_format = "0.00"' \
@@ -192,6 +194,9 @@ if [ -n "$OUTPUT_CSV" ]; then
             '        v = cell.value or ""' \
             '        max_len = max(max_len, len(str(v)))' \
             '    ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 24)' \
+            '' \
+            'ws.freeze_panes = "A2"' \
+            'ws.auto_filter.ref = ws.dimensions' \
             '' \
             'wb.save(output_xlsx)' > "$TMP_PY"
         python3 "$TMP_PY" "$TMP_CSV" "$OUTPUT_CSV"
