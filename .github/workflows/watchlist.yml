@@ -10,17 +10,22 @@ on:
         type: choice
         options:
           - capmkt
-          - dividendStocks
+          - defence
+          - dividend
           - etfs
+          - healthcare
           - holdings
           - ipo
           - it
           - metal
+          - microcap250
+          - msfinance
           - mshealthcare
           - pharma
           - psubank
           - rail
           - smlcap
+          - smlcap50
       send_email:
         description: Whether to send an email with the watchlist dashboard XLSX attached
         required: false
