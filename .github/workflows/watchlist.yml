@@ -15,6 +15,7 @@ on:
           - etfs
           - healthcare
           - holdings
+          - ind_digital
           - ipo
           - it
           - itetf
@@ -22,11 +23,15 @@ on:
           - microcap250
           - msfinance
           - mshealthcare
+          - nifty100liquid15
+          - niftygrowthsec15
           - pharma
           - psubank
           - rail
+          - shariah50
           - smlcap
           - smlcap50
+          - tata_25_cap
       send_email:
         description: Whether to send an email with the watchlist dashboard XLSX attached
         required: false
