@@ -17,6 +17,7 @@ on:
           - holdings
           - ipo
           - it
+          - itetf
           - metal
           - microcap250
           - msfinance
