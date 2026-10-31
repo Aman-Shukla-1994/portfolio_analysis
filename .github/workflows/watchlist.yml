@@ -21,6 +21,7 @@ on:
           - itetf
           - metal
           - microcap250
+          - midsmall_it
           - msfinance
           - mshealthcare
           - nifty100liquid15
@@ -28,10 +29,12 @@ on:
           - pharma
           - psubank
           - rail
+          - services
           - shariah50
           - smlcap
           - smlcap50
           - tata_25_cap
+          - top15
       send_email:
         description: Whether to send an email with the watchlist dashboard XLSX attached
         required: false
